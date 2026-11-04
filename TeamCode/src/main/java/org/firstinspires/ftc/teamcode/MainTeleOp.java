@@ -120,6 +120,7 @@ public class MainTeleOp extends LinearOpMode {
     double Normalized_Target_Heading;
     double Target = 0;
     final double Turret_Offset_Forward = -2;
+    int headingStep = 5;
     double Turret_X;
     double Turret_Y;
     double yawRad = 0;
@@ -143,6 +144,7 @@ public class MainTeleOp extends LinearOpMode {
     double Virtual_Delta_X = 0;
     double Virtual_Delta_Y = 0;
     double virtualDistance = 0;
+    int headingOffset = 0;
     double dh_dt = 0;
     double distance = 0;
     double velocityCorrection = 0;
@@ -300,7 +302,7 @@ public class MainTeleOp extends LinearOpMode {
        telemetry.addData("dh/dt", dh_dt);
        telemetry.addData("Velocity Correction", velocityCorrection);
       */
-        telemetry.addData("Y Goal Offset", YGoal_Offset);
+        telemetry.addData("Heading Offset", headingOffset);
         telemetry.addData("Velocity Offset", VelocityOffset);
         telemetry.update();
     }
@@ -504,18 +506,13 @@ public class MainTeleOp extends LinearOpMode {
         } else if (Robot_X < -Goal_Switch_Band) {
             Goal_X = -8;
         } // otherwise keep the current goal
-        Goal_Y = Base_Goal_Y + YGoal_Offset;
         // Automatic Goal Switching //
 
-
-        // Goal Y Offset //
         if (gamepad2.dpadRightWasPressed()) {
-            YGoal_Offset -= 8;
+            headingOffset = headingOffset - headingStep;
         } else if (gamepad2.dpadLeftWasPressed()) {
-            YGoal_Offset += 8;
+            headingOffset = headingOffset + headingStep;
         }
-        // Goal Y Offset //
-
 
         // Velocity Offset //
         if (gamepad2.dpadDownWasPressed()) {
@@ -587,7 +584,7 @@ public class MainTeleOp extends LinearOpMode {
         double rawTurretAngle = ((Target_Heading - Robot_Yaw) % 360 + 360) % 360;
         Turret_In_Range = rawTurretAngle <= Servo_Max_Range;
         if (Turret_In_Range) {
-            Normalized_Target_Heading = rawTurretAngle;
+            Normalized_Target_Heading = rawTurretAngle + headingOffset;
         } else {
             // In the dead zone: park at whichever end of the travel is closer
             double deadZoneMid = (Servo_Max_Range + 360) / 2;
