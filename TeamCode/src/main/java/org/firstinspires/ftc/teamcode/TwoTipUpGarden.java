@@ -38,6 +38,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     private DcMotor Intake;
     private DcMotor Transfer;
     private Servo FlowerMechanism;
+    private Servo turret;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(54.9267, 8.1789, 180);
@@ -205,6 +206,7 @@ public class TwoTipUpGarden extends LinearOpMode {
             // Grab from garden //
 
             // Shoot for the second time //
+                instant(() -> turret.setPosition(0.5)),
                 follow(follower, score2()),
                 waitMs(250),
                 startShooting(),
@@ -283,7 +285,7 @@ public class TwoTipUpGarden extends LinearOpMode {
         Intake = hardwareMap.get(DcMotor.class, "Intake");
         Transfer = hardwareMap.get(DcMotor.class, "Transfer");
         FlowerMechanism = hardwareMap.get(Servo.class, "Flower Mechanism");
-        Servo turret = hardwareMap.get(Servo.class, "Turret");
+        turret = hardwareMap.get(Servo.class, "Turret");
 
         // Shooter //
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -309,7 +311,7 @@ public class TwoTipUpGarden extends LinearOpMode {
         Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         // Transfer //
 
-        turret.setPosition(0.5);
+        turret.setPosition(0.75);
 
         FlowerMechanism.setPosition(0.025);
 
