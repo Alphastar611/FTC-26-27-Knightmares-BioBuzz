@@ -26,7 +26,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
 @Autonomous(name = "AutoPath", group = "Autonomous")
-public class GoalUp extends LinearOpMode {
+public class TwoTipUp extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
     final int shooterVelocity = 1500;
@@ -164,7 +164,7 @@ public class GoalUp extends LinearOpMode {
         return sequential(
             // Shoot Pre-Load //
                 shooterOn(),
-                waitMs(500),
+                waitMs(1000),
                 startShooting(),
                 waitMs(1500),
                 stopShooting(),
