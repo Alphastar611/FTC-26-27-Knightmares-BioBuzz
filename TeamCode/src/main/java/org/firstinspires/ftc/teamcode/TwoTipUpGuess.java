@@ -24,7 +24,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
-@Autonomous(name = "TwoTipUp", group = "Autonomous")
+@Autonomous(name = "TwoTipUpGuess", group = "Autonomous")
 public class TwoTipUpGuess extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
