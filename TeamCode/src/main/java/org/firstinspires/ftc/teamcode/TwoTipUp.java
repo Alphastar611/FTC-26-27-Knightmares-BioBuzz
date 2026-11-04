@@ -25,11 +25,11 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
 
-@Autonomous(name = "AutoPath", group = "Autonomous")
+@Autonomous(name = "TwoTipUp", group = "Autonomous")
 public class TwoTipUp extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
-    final int shooterVelocity = 1500;
+    final int shooterVelocity = 1440;
     final int intakeVelocity = 2400;
     final int transferVelocity = 2800;
     final double flowerUp = 0.025;
@@ -52,16 +52,17 @@ public class TwoTipUp extends LinearOpMode {
     private final Pose score2Control1 = poseFactory.of(50.0206, 73.8511, 0);
     private final Pose score2Control2 = poseFactory.of(0, 95.5562, 0);
     private final Pose score2Control3 = poseFactory.of(54.18, 109.1717, 0);
-    private final Pose scoreToFlower2HesiStart = poseFactory.of(60, 130, 270);
-    private final Pose scoreToFlower2Hesi = poseFactory.of(54.9788, 112.129, 90);
-    private final Pose scoreToFlower2 = poseFactory.of(46.75, 120, 90);
-    private final Pose flowerGrab2 = poseFactory.of(46.75, 128, 90);
-    private final Pose score3HesiStart = poseFactory.of(46.75, 128, 90);
-    private final Pose score3Hesi = poseFactory.of(53.2023, 113.7212, 270);
+    private final Pose scoreToFlower2Start = poseFactory.of(60, 130, 270);
+    private final Pose scoreToFlower2 = poseFactory.of(47.1078, 113.7389, 90);
+    private final Pose flowerGrab2 = poseFactory.of(46.75, 130, 90);
+    private final Pose score3HesiStart = poseFactory.of(46.75, 130, 90);
+    private final Pose score3Hesi = poseFactory.of(56.4223, 108.3546, 270);
+    private final Pose score3Start = poseFactory.of(56.4223, 108.3546, 270);
     private final Pose score3 = poseFactory.of(60, 130, 270);
     private final Pose parkStart = poseFactory.of(60, 130, 270);
-    private final Pose park = poseFactory.of(11.5422, 123.7484, 180);
+    private final Pose park = poseFactory.of(10, 112, 180);
     private final Pose parkControl1 = poseFactory.of(48.7288, 107.878, 0);
+
     public Path scoreToFlower1() {
         return Paths.curve(start, scoreToFlower1Control1, scoreToFlower1).linear(start, scoreToFlower1);
     }
@@ -74,12 +75,8 @@ public class TwoTipUp extends LinearOpMode {
         return Paths.curve(score2Start, score2Control1, score2Control2, score2Control3, score2).linear(score2Start, score2);
     }
 
-    public Path scoreToFlower2Hesi() {
-        return Paths.line(scoreToFlower2HesiStart, scoreToFlower2Hesi).linear(scoreToFlower2HesiStart, scoreToFlower2Hesi);
-    }
-
     public Path scoreToFlower2() {
-        return Paths.line(scoreToFlower2Hesi, scoreToFlower2).constant(scoreToFlower2);
+        return Paths.line(scoreToFlower2Start, scoreToFlower2).linear(scoreToFlower2Start, scoreToFlower2);
     }
 
     public Path flowerGrab2() {
@@ -91,7 +88,7 @@ public class TwoTipUp extends LinearOpMode {
     }
 
     public Path score3() {
-        return Paths.line(score3Hesi, score3).constant(score3);
+        return Paths.line(score3Start, score3).linear(score3Start, score3);
     }
 
     public Path park() {
@@ -164,7 +161,7 @@ public class TwoTipUp extends LinearOpMode {
         return sequential(
             // Shoot Pre-Load //
                 shooterOn(),
-                waitMs(1000),
+                waitMs(1500),
                 startShooting(),
                 waitMs(1500),
                 stopShooting(),
@@ -187,13 +184,11 @@ public class TwoTipUp extends LinearOpMode {
             // Shoot for the second time //
                 follow(follower, score2()),
                 flowerUp(),
-                waitMs(500),
+                waitMs(1000),
                 startShooting(),
                 waitMs(1500),
                 stopShooting(),
             // Shoot for the second time //
-
-                follow(follower, scoreToFlower2Hesi()),
 
             // Drive to the second flower //
                 follow(follower, scoreToFlower2()),
@@ -214,7 +209,7 @@ public class TwoTipUp extends LinearOpMode {
 
             // Score for the third time //
                 follow(follower, score3()),
-                waitMs(500),
+                waitMs(1000),
                 startShooting(),
                 waitMs(1500),
                 stopShooting(),
@@ -235,7 +230,7 @@ public class TwoTipUp extends LinearOpMode {
         Shooter = hardwareMap.get(DcMotor.class, "Shooter");
         Intake = hardwareMap.get(DcMotor.class, "Intake");
         Transfer = hardwareMap.get(DcMotor.class, "Transfer");
-        FlowerMechanism = hardwareMap.get(Servo.class, "FlowerMechanism");
+        FlowerMechanism = hardwareMap.get(Servo.class, "Flower Mechanism");
         Turret = hardwareMap.get(Servo.class, "Turret");
 
         // Shooter //

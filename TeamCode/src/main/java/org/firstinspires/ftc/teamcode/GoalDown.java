@@ -22,10 +22,10 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
-@Autonomous(name = "AutoPath", group = "Autonomous")
+@Autonomous(name = "GoalDown", group = "Autonomous")
 public class GoalDown extends LinearOpMode {
 
-    final int shooterVelocity = 1500;
+    final int shooterVelocity = 1440;
     final int intakeVelocity = 2400;
     final int transferVelocity = 2800;
     private Follower follower;
@@ -34,10 +34,10 @@ public class GoalDown extends LinearOpMode {
     private DcMotor Transfer;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
-    private final Pose start = poseFactory.of(62.6188, 133.2212, 90);
+    private final Pose start = poseFactory.of(62.6188, 133.2212, 270);
     private final Pose creep = poseFactory.of(57.9886, 119.9128, 270);
-    private final Pose parkStart = poseFactory.of(57.9886, 119.9128, 270);
-    private final Pose park = poseFactory.of(12.3462, 122.6305, 180);
+    private final Pose parkStart = poseFactory.of(57.9886, 119.9128, 180);
+    private final Pose park = poseFactory.of(12.3462, 112, 180);
     public Path creep() {
         return Paths.line(start, creep).constant(creep);
     }
@@ -78,7 +78,7 @@ public class GoalDown extends LinearOpMode {
                 // Shoot Pre-Load //
                 waitMs(10000),
                 shooterOn(),
-                waitMs(1000),
+                waitMs(1500),
                 startShooting(),
                 waitMs(1500),
                 stopShooting(),
