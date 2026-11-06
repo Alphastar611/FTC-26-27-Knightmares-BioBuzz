@@ -55,7 +55,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final Pose scoreToFlower = poseFactory.of(20, 46.75, 180);
     private final Pose scoreToFlowerControl1 = poseFactory.of(16.549, 97.3057, 0);
     private final Pose flowerGrab1Start = poseFactory.of(20, 46.75, 180);
-    private final Pose flowerGrab1 = poseFactory.of(12, 46.75, 180);
+    private final Pose flowerGrab1 = poseFactory.of(14, 48, 180);
     private final Pose score3Start = poseFactory.of(12, 46.75, 180);
     private final Pose score3 = poseFactory.of(60, 130, 270);
     private final Pose score3Control1 = poseFactory.of(43.4134, 58.9438, 0);
@@ -69,7 +69,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final Pose score4Start = poseFactory.of(58, 110, 270);
     private final Pose score4 = poseFactory.of(60, 130, 270);
     private final Pose parkStart = poseFactory.of(60, 130, 270);
-    private final Pose park = poseFactory.of(10, 118, 180);
+    private final Pose park = poseFactory.of(15, 118, 180);
     private final Pose parkControl1 = poseFactory.of(41.7276, 106.2799, 0);
 
     public Path scorePreload() {
@@ -289,7 +289,7 @@ public class TwoTipUpGarden extends LinearOpMode {
 
         // Shooter //
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(100, 0, 0, 15);
+        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 15);
         Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         Shooter.setDirection(DcMotor.Direction.REVERSE);
         Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -311,7 +311,7 @@ public class TwoTipUpGarden extends LinearOpMode {
         Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         // Transfer //
 
-        turret.setPosition(0.75);
+        turret.setPosition(0.7875);
 
         FlowerMechanism.setPosition(0.025);
 
