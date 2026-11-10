@@ -42,7 +42,7 @@ public class GuessGrab extends LinearOpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(54.39, 8.1789, 90);
-    private final Pose shoot1 = poseFactory.of(35.4602, 12.3255, 55);
+    private final Pose shoot1 = poseFactory.of(35.4602, 12.3255, 60);
     private final Pose guessGrab = poseFactory.of(58.5689, 107.9968, 104.9536);
     private final Pose guessGrabControl1 = poseFactory.of(77.9751, 38.0105, 0);
     private final Pose guessGrabControl2 = poseFactory.of(32.7428, 24.1482, 0);

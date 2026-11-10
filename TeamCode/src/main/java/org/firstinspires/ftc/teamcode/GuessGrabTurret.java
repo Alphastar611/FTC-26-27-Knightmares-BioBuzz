@@ -42,7 +42,7 @@ public class GuessGrabTurret extends LinearOpMode {
     private Servo turret;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
-    private final Pose start = poseFactory.of(30.7769, 8.1789, 90);
+    private final Pose start = poseFactory.of(54.39, 8.1789, 90);
     private final Pose shoot1 = poseFactory.of(26.5206, 11.959, 90);
     private final Pose guessGrab = poseFactory.of(32.6302, 130, 90);
     private final Pose guessGrabControl1 = poseFactory.of(83.1628, 37.4738, 0);
@@ -50,9 +50,9 @@ public class GuessGrabTurret extends LinearOpMode {
     private final Pose guessGrabControl3 = poseFactory.of(80.695, 84.5856, 0);
     private final Pose guessGrabControl4 = poseFactory.of(43.8004, 83.5634, 0);
     private final Pose guessGrabControl5 = poseFactory.of(74.8134, 120.2771, 0);
-    private final Pose guessGrabSegment2Start = poseFactory.of(32.6302, 130, 112.6025);
-    private final Pose guessGrabSegment2End = poseFactory.of(32.6302, 130, 90);
-    private final Pose park = poseFactory.of(11.6808, 121.3973, 90);
+    private final Pose guessGrabSegment2Start = poseFactory.of(26, 142, 112.6025);
+    private final Pose guessGrabSegment2End = poseFactory.of(26, 142, 90);
+    private final Pose park = poseFactory.of(14, 121.3973, 90);
 
     public Path shoot1() {
         return Paths.line(start, shoot1).constant(shoot1);
@@ -147,7 +147,7 @@ public class GuessGrabTurret extends LinearOpMode {
                 // Wait for tip and then guess intake //
 
                 // Shoot for the second time //
-                instant(() -> turret.setPosition(0.929577464789)),
+                instant(() -> turret.setPosition(0.975)),
                 waitMs(1500),
                 startShooting(),
                 waitMs(2000),

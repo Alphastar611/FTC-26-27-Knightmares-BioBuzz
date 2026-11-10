@@ -119,6 +119,8 @@ public class MainTeleOp extends LinearOpMode {
     boolean wasTurretOutOfRange = false;
     double Normalized_Target_Heading;
     double Target = 0;
+    double targetVelo = 0;
+    int targetVeloStart = 1440;
     final double Turret_Offset_Forward = -2;
     int headingStep = 5;
     double Turret_X;
@@ -130,7 +132,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
     // Shooter //
-    final int VelocityStep = 50;
+    final int VelocityStep = 20;
     int VelocityOffset;
     // Shooter //
 
@@ -194,7 +196,7 @@ public class MainTeleOp extends LinearOpMode {
 
         // Shooter //
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(100, 0, 0, 15);
+        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 13.75);
         Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooterUsingEncoder = true;
         Shooter.setDirection(DcMotor.Direction.REVERSE);
@@ -226,7 +228,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
         // Flower Servo //
-        FlowerMechanism.setDirection(Servo.Direction.REVERSE);
+        FlowerMechanism.setDirection(Servo.Direction.FORWARD);
         // Flower Servo //
 
 
@@ -278,7 +280,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
     private void Telemetry2() {
-      /* telemetry.addData("Loop ms", loopMs);
+     /*  telemetry.addData("Loop ms", loopMs);
        telemetry.addData("Max loop ms", maxLoopMs);
        telemetry.addData("Stalls (>" + (int) Stall_Threshold_Ms + "ms)", stallCount);
        telemetry.addData("Pinpoint status", String.valueOf(Pinpoint_Status));
@@ -286,7 +288,6 @@ public class MainTeleOp extends LinearOpMode {
        telemetry.addData("Rejected frames", rejectedFrames);
        telemetry.addData("Pinpoint errors", pinpointErrors);
        telemetry.addData("Robot Yaw", Robot_Yaw);
-       telemetry.addData("Shooter Velocity", ((DcMotorEx) Shooter).getVelocity());
        telemetry.addData("Turret Servo Pos", Turret.getPosition());
        telemetry.addData("Target Ticks", Target_Ticks);
        telemetry.addData("Turret In Range", Turret_In_Range);
@@ -298,6 +299,8 @@ public class MainTeleOp extends LinearOpMode {
         telemetry.addData("Delta X", Delta_X);
         telemetry.addData("Delta Y", Delta_Y);
         telemetry.addData("Distance from goal: ", distance);
+        telemetry.addData("Shooter Velocity", ((DcMotorEx) Shooter).getVelocity());
+        telemetry.addData("Target Velocity", targetVelo);
      /*   telemetry.addData("Virtual Distance", virtualDistance);
        telemetry.addData("dh/dt", dh_dt);
        telemetry.addData("Velocity Correction", velocityCorrection);
@@ -566,6 +569,7 @@ public class MainTeleOp extends LinearOpMode {
         Virtual_Delta_X = Virtual_Goal_X - Turret_X;
         Virtual_Delta_Y = Virtual_Goal_Y - Turret_Y;
         virtualDistance = Math.hypot(Virtual_Delta_X, Virtual_Delta_Y);
+        targetVelo = ((3.64541*distance)+1320);
 
 
         dh_dt = (virtualDistance - distance) / Shot_Time;
@@ -643,7 +647,7 @@ public class MainTeleOp extends LinearOpMode {
 
         // Shooter (off = coast: RUN_WITHOUT_ENCODER + zero power, instead of holding 0 velocity) //
         if (Shooter_Switch) {
-            SetShooterVelocity(1500 + VelocityOffset + velocityCorrection);
+            SetShooterVelocity(targetVelo+velocityCorrection+VelocityOffset);
         } else {
             SetShooterOff();
         }
@@ -651,7 +655,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
         // Flower //
-        SetServo(FlowerMechanism, false, Flower_Switch ? 0.3875 : 0.025);
+        SetServo(FlowerMechanism, false, Flower_Switch ? 0.325 : 0);
         // Flower //
 
 
