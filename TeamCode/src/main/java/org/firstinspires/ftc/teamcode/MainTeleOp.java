@@ -105,7 +105,6 @@ public class MainTeleOp extends LinearOpMode {
     int Goal_Y;
     final int Base_Goal_Y = 18;
     final double Goal_Switch_Band = 3;
-    int YGoal_Offset = 0;
     // Goal //
 
 
@@ -119,8 +118,7 @@ public class MainTeleOp extends LinearOpMode {
     boolean wasTurretOutOfRange = false;
     double Normalized_Target_Heading;
     double Target = 0;
-    double targetVelo = 0;
-    int targetVeloStart = 1440;
+    double targetVelocity = 0;
     final double Turret_Offset_Forward = -2;
     int headingStep = 5;
     double Turret_X;
@@ -280,18 +278,6 @@ public class MainTeleOp extends LinearOpMode {
 
 
     private void Telemetry2() {
-     /*  telemetry.addData("Loop ms", loopMs);
-       telemetry.addData("Max loop ms", maxLoopMs);
-       telemetry.addData("Stalls (>" + (int) Stall_Threshold_Ms + "ms)", stallCount);
-       telemetry.addData("Pinpoint status", String.valueOf(Pinpoint_Status));
-       telemetry.addData("Pinpoint OK", Pinpoint_OK);
-       telemetry.addData("Rejected frames", rejectedFrames);
-       telemetry.addData("Pinpoint errors", pinpointErrors);
-       telemetry.addData("Robot Yaw", Robot_Yaw);
-       telemetry.addData("Turret Servo Pos", Turret.getPosition());
-       telemetry.addData("Target Ticks", Target_Ticks);
-       telemetry.addData("Turret In Range", Turret_In_Range);
-       telemetry.addData("Normalized Target Heading", Normalized_Target_Heading); */
         telemetry.addData("Robot X", Robot_X);
         telemetry.addData("Robot Y", Robot_Y);
         telemetry.addData("Goal X", Goal_X);
@@ -300,11 +286,7 @@ public class MainTeleOp extends LinearOpMode {
         telemetry.addData("Delta Y", Delta_Y);
         telemetry.addData("Distance from goal: ", distance);
         telemetry.addData("Shooter Velocity", ((DcMotorEx) Shooter).getVelocity());
-        telemetry.addData("Target Velocity", targetVelo);
-     /*   telemetry.addData("Virtual Distance", virtualDistance);
-       telemetry.addData("dh/dt", dh_dt);
-       telemetry.addData("Velocity Correction", velocityCorrection);
-      */
+        telemetry.addData("Target Velocity", targetVelocity);
         telemetry.addData("Heading Offset", headingOffset);
         telemetry.addData("Velocity Offset", VelocityOffset);
         telemetry.update();
@@ -443,8 +425,8 @@ public class MainTeleOp extends LinearOpMode {
     private void AcceptPinpointFrame(double px, double py, double yaw,
                                      double vx, double vy, double hv) {
         // NaN / infinite values are always rejected
-        if (!isFinite(px) || !isFinite(py) || !isFinite(yaw)
-                || !isFinite(vx) || !isFinite(vy) || !isFinite(hv)) {
+        if (isFinite(px) || isFinite(py) || isFinite(yaw)
+                || isFinite(vx) || isFinite(vy) || isFinite(hv)) {
             rejectedFrames++;
             return;
         }
@@ -488,7 +470,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
     private boolean isFinite(double v) {
-        return !Double.isNaN(v) && !Double.isInfinite(v);
+        return Double.isNaN(v) || Double.isInfinite(v);
     }
 
 
@@ -569,7 +551,7 @@ public class MainTeleOp extends LinearOpMode {
         Virtual_Delta_X = Virtual_Goal_X - Turret_X;
         Virtual_Delta_Y = Virtual_Goal_Y - Turret_Y;
         virtualDistance = Math.hypot(Virtual_Delta_X, Virtual_Delta_Y);
-        targetVelo = ((3.64541*distance)+1320);
+        targetVelocity = ((3.64541*distance)+1320);
 
 
         dh_dt = (virtualDistance - distance) / Shot_Time;
@@ -626,15 +608,15 @@ public class MainTeleOp extends LinearOpMode {
 
         // Intake + Transfer //
         if (gamepad1.right_trigger > 0.1) {
-            SetTransferVelocity(2800);
+            SetTransferVelocity();
             SetIntakeVelocity(2400);
         }
         else if (gamepad1.right_bumper) {
-            SetTransferPower(-0.125);   // explicitly hold the transfer (same as idle) while the intake reverses
+            SetTransferPower();   // explicitly hold the transfer (same as idle) while the intake reverses
             SetIntakeVelocity(-2400);
         }
         else {
-            SetTransferPower(-0.125);
+            SetTransferPower();
             SetIntakeVelocity(gamepad1.left_trigger * 2400);
         }
         // Intake + Transfer //
@@ -647,7 +629,7 @@ public class MainTeleOp extends LinearOpMode {
 
         // Shooter (off = coast: RUN_WITHOUT_ENCODER + zero power, instead of holding 0 velocity) //
         if (Shooter_Switch) {
-            SetShooterVelocity(targetVelo+velocityCorrection+VelocityOffset);
+            SetShooterVelocity(targetVelocity +velocityCorrection+VelocityOffset);
         } else {
             SetShooterOff();
         }
@@ -747,21 +729,21 @@ public class MainTeleOp extends LinearOpMode {
     }
 
 
-    private void SetTransferVelocity(double v) {
+    private void SetTransferVelocity() {
         SetTransferEncoderMode(true);
-        if (NeedsWrite(v, lastTransferVel, 1)) {
-            ((DcMotorEx) Transfer).setVelocity(v);
-            lastTransferVel = v;
+        if (NeedsWrite(2800, lastTransferVel, 1)) {
+            ((DcMotorEx) Transfer).setVelocity(2800);
+            lastTransferVel = 2800;
             lastTransferPower = Double.NaN;
         }
     }
 
 
-    private void SetTransferPower(double p) {
+    private void SetTransferPower() {
         SetTransferEncoderMode(false);
-        if (NeedsWrite(p, lastTransferPower, 0.001)) {
-            Transfer.setPower(p);
-            lastTransferPower = p;
+        if (NeedsWrite(-0.125, lastTransferPower, 0.001)) {
+            Transfer.setPower(-0.125);
+            lastTransferPower = -0.125;
             lastTransferVel = Double.NaN;
         }
     }

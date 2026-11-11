@@ -23,7 +23,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
 
-@Autonomous(name = "OneTipUp", group = "Autonomous")
+@Autonomous(name = "OneTipUp", group = "Goal Up")
 public class OneTipUp extends LinearOpMode {
 
     final int shooterVelocity = 1440;

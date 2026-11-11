@@ -24,12 +24,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
-@Autonomous(name = "TwoTipUpGarden", group = "Autonomous")
+@Autonomous(name = "TwoTipUpGarden", group = "Goal Up")
 public class TwoTipUpGarden extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
-    final int shooterVelocity = 1440;
-    final int intakeVelocity = 2400;
+    final int shooterVelocity = 1480;
+    final int intakeVelocity = 2000;
     final int transferVelocity = 2800;
     final double flowerUp = 0;
     final double flowerDown = 0.325;
@@ -54,7 +54,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final Pose scoreToFlowerStart = poseFactory.of(60, 130, 270);
     private final Pose scoreToFlower = poseFactory.of(20, 46.75, 180);
     private final Pose scoreToFlowerControl1 = poseFactory.of(16.549, 97.3057, 0);
-    private final Pose flowerGrab1Start = poseFactory.of(20, 46.75, 180);
+    private final Pose flowerGrab1Start = poseFactory.of(24, 46.75, 180);
     private final Pose flowerGrab1 = poseFactory.of(14, 48, 180);
     private final Pose score3Start = poseFactory.of(12, 46.75, 180);
     private final Pose score3 = poseFactory.of(60, 130, 270);
@@ -62,8 +62,8 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final Pose score3Control2 = poseFactory.of(0, 82.2269, 0);
     private final Pose scoreToFlower2Start = poseFactory.of(60, 130, 270);
     private final Pose scoreToFlower2 = poseFactory.of(46.75, 108, 90);
-    private final Pose flowerGrab2Start = poseFactory.of(46.75, 108, 90);
-    private final Pose flowerGrab2 = poseFactory.of(46.75, 130, 90);
+    private final Pose flowerGrab2Start = poseFactory.of(46.75, 106, 90);
+    private final Pose flowerGrab2 = poseFactory.of(48, 132, 90);
     private final Pose score4BufferStart = poseFactory.of(46.75, 130, 90);
     private final Pose score4Buffer = poseFactory.of(58, 110, 270);
     private final Pose score4Start = poseFactory.of(58, 110, 270);
@@ -155,23 +155,12 @@ public class TwoTipUpGarden extends LinearOpMode {
         ((DcMotorEx) Transfer).setVelocity(transferVelocity);
     }
 
-    private void transferStop() {
-        Transfer.setPower(0);
-    }
-
 // ---------- Commands ----------
 
     private Command intakeOn() {
         return instant(() -> {
             ((DcMotorEx) Intake).setVelocity(intakeVelocity);
             transferHoldBack();
-        });
-    }
-
-    private Command intakeOff() {
-        return instant(() -> {
-            Intake.setPower(0);
-            transferStop();
         });
     }
     private Command flowerDown(){
@@ -206,7 +195,7 @@ public class TwoTipUpGarden extends LinearOpMode {
             // Grab from garden //
 
             // Shoot for the second time //
-                instant(() -> turret.setPosition(0.5)),
+                instant(() -> turret.setPosition(0.475)),
                 follow(follower, score2()),
                 waitMs(250),
                 startShooting(),
@@ -224,10 +213,7 @@ public class TwoTipUpGarden extends LinearOpMode {
             // Grab out of the flower //
                 followWithTimeout(flowerGrab1(),1),
                 waitMs(1000),
-                parallel (
-                    intakeOff(),
-                    shooterOn()
-                ),
+                shooterOn(),
             // Grab out of the flower //
 
             // Score for the third time //
@@ -249,18 +235,15 @@ public class TwoTipUpGarden extends LinearOpMode {
             // Grab out of the second flower //
                 followWithTimeout(flowerGrab2(),1.25),
                 waitMs(1000),
-                parallel (
-                    intakeOff(),
-                    shooterOn()
-                ),
+                shooterOn(),
             // Grab out of the second flower //
 
             // Score for the fourth time //
                 follow(follower, score4Buffer()),
                 waitMs(250),
-                flowerUp(),
                 follow(follower, score4()),
                 waitMs(250),
+                flowerUp(),
                 startShooting(),
                 waitMs(1000),
                 stopShooting(),

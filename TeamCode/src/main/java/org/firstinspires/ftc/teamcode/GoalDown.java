@@ -22,7 +22,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
-@Autonomous(name = "GoalDown", group = "Autonomous")
+@Autonomous(name = "GoalDown", group = "Goal Down")
 public class GoalDown extends LinearOpMode {
 
     final int shooterVelocity = 1440;
