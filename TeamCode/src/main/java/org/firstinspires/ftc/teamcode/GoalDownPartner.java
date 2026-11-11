@@ -36,7 +36,7 @@ public class GoalDownPartner extends LinearOpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(62.6188, 134.2946, 90);
-    private final Pose wait = poseFactory.of(60, 72, 270);
+    private final Pose wait = poseFactory.of(60, 72, 90);
     private final Pose returnPose = poseFactory.of(56, 116, 180);
     private final Pose returnPoseSegment1Heading = poseFactory.of(56, 116, 270);
     private final Pose returnPoseSegment2Start = poseFactory.of(56, 116, 270);

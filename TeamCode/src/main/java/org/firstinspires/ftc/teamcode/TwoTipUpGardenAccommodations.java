@@ -14,6 +14,7 @@ import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
+import com.pedropathing.paths.interpolator.Interpolator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -28,7 +29,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class TwoTipUpGardenAccommodations extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
-    final int shooterVelocity = 1480;
+    final int shooterVelocity = 1520;
     final int intakeVelocity = 2000;
     final int transferVelocity = 2800;
     final double flowerUp = 0;
@@ -38,35 +39,36 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
     private DcMotor Intake;
     private DcMotor Transfer;
     private Servo FlowerMechanism;
-    private Servo turret;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(53.8534, 8.3578, 90);
-    private final Pose shootPreload = poseFactory.of(36, 12, 180);
-    private final Pose gardenBufferStart = poseFactory.of(36, 12, 180);
+    private final Pose shootPreload = poseFactory.of(34, 12, 70);
+    private final Pose gardenBufferStart = poseFactory.of(34, 12, 180);
     private final Pose gardenBuffer = poseFactory.of(16, 20, 270);
-    private final Pose gardenCollect = poseFactory.of(8, 6, 270);
-    private final Pose score2Start = poseFactory.of(8, 6, 270);
-    private final Pose score2 = poseFactory.of(36, 12, 90);
+    private final Pose gardenCollect = poseFactory.of(6, 6, 270);
+    private final Pose score2Start = poseFactory.of(6, 6, 270);
+    private final Pose score2 = poseFactory.of(34, 12, 55);
     private final Pose score2Control1 = poseFactory.of(20.2246, 29.0205, 0);
-    private final Pose flower1BufferStart = poseFactory.of(36, 12, 90);
-    private final Pose flower1Buffer = poseFactory.of(24, 46.75, 180);
-    private final Pose flower1Collect = poseFactory.of(12, 46.75, 180);
+    private final Pose flower1BufferStart = poseFactory.of(34, 12, 90);
+    private final Pose flower1Buffer = poseFactory.of(24, 50, 180);
+    private final Pose flower1Collect = poseFactory.of(6, 50, 180);
     private final Pose flower1Shuffle = poseFactory.of(24, 46.75, 180);
-    private final Pose flower1Collect2 = poseFactory.of(12, 46.75, 180);
-    private final Pose score3Start = poseFactory.of(12, 46.75, 180);
-    private final Pose score3 = poseFactory.of(34, 130, 90);
+    private final Pose flower1Collect2 = poseFactory.of(6, 46.75, 180);
+    private final Pose score3 = poseFactory.of(34, 130, -55);
     private final Pose score3Control1 = poseFactory.of(38.093, 69.429, 0);
+    private final Pose score3Segment2Start = poseFactory.of(34, 130, -91.7677);
+    private final Pose score3Segment2End = poseFactory.of(34, 130, 305);
     private final Pose flower2Buffer = poseFactory.of(46.75, 120, 90);
-    private final Pose flower2Collect = poseFactory.of(46.75, 128, 90);
+    private final Pose flower2Collect = poseFactory.of(46.75, 134, 90);
     private final Pose flower2Shuffle = poseFactory.of(46.75, 120, 90);
-    private final Pose flower2Collect2 = poseFactory.of(46.75, 128, 90);
-    private final Pose shoot4 = poseFactory.of(34, 130, 90);
+    private final Pose flower2Collect2 = poseFactory.of(46.75, 134, 90);
+    private final Pose shoot4Start = poseFactory.of(46.75, 134, 90);
+    private final Pose shoot4 = poseFactory.of(34, 130, 305);
     private final Pose shoot4Control1 = poseFactory.of(39.4855, 117.5357, 0);
     private final Pose park = poseFactory.of(12, 120, 90);
 
     public Path shootPreload() {
-        return Paths.line(start, shootPreload).constant(shootPreload);
+        return Paths.line(start, shootPreload).linear(start, shootPreload);
     }
 
     public Path gardenBuffer() {
@@ -98,7 +100,7 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
     }
 
     public Path score3() {
-        return Paths.curve(score3Start, score3Control1, score3).linear(score3Start, score3);
+        return Paths.curve(flower1Collect2, score3Control1, score3).heading(Interpolator.piecewise().until(0.8, Interpolator.tangent.reverse()).until(1, Interpolator.linear(score3Segment2Start, score3Segment2End)));
     }
 
     public Path flower2Buffer() {
@@ -118,7 +120,7 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
     }
 
     public Path shoot4() {
-        return Paths.curve(flower2Collect2, shoot4Control1, shoot4).constant(shoot4);
+        return Paths.curve(shoot4Start, shoot4Control1, shoot4).linear(shoot4Start, shoot4);
     }
 
     public Path park() {
@@ -201,7 +203,6 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
             // Grab from garden //
 
             // Shoot for the second time //
-                instant(() -> turret.setPosition(0.670422535211)),
                 follow(follower, score2()),
                 waitMs(250),
                 startShooting(),
@@ -223,7 +224,6 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
                 waitMs(250),
                 followWithTimeout(flower1Collect2(),0.5),
                 waitMs(500),
-                instant(() -> turret.setPosition(0.929577464789)),
                 shooterOn(),
             // Grab out of the flower //
 
@@ -279,7 +279,7 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
         Intake = hardwareMap.get(DcMotor.class, "Intake");
         Transfer = hardwareMap.get(DcMotor.class, "Transfer");
         FlowerMechanism = hardwareMap.get(Servo.class, "Flower Mechanism");
-        turret = hardwareMap.get(Servo.class, "Turret");
+        Servo turret = hardwareMap.get(Servo.class, "Turret");
 
         // Shooter //
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -305,7 +305,7 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
         Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         // Transfer //
 
-        turret.setPosition(0.845070422535);
+        turret.setPosition(0.507);
 
         FlowerMechanism.setPosition(0);
 
