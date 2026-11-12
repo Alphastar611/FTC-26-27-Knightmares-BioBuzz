@@ -24,7 +24,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
-@Autonomous(name = "TwoTipUpGardenAccommodations", group = "Royal Society")
+@Autonomous(name = "RoyalSociety", group = "Royal Society")
 public class RoyalSociety extends LinearOpMode {
 
     final int shooterVelocity = 1520;
