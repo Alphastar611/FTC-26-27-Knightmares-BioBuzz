@@ -136,7 +136,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
     // Shoot-on-the-move //
-    final double Shot_Time = 0.4833333333;
+    final double Shot_Time = 0.65;
     final double Max_Velocity_Correction = 300;
     double KDT = 1;
     double Virtual_Goal_X = 0;
@@ -194,7 +194,7 @@ public class MainTeleOp extends LinearOpMode {
 
         // Shooter //
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 13.75);
+        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(25, 0, 0, 14);
         Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooterUsingEncoder = true;
         Shooter.setDirection(DcMotor.Direction.REVERSE);
@@ -265,7 +265,7 @@ public class MainTeleOp extends LinearOpMode {
         Goal_X = -8;
         Goal_Y = Base_Goal_Y;
         Target = 0;
-        Turret_KF = 0.2125;
+        Turret_KF = 0.25;
         Normalized_Target_Heading = 0;
         // Localization + Goal + Turret Math //
 
@@ -487,9 +487,9 @@ public class MainTeleOp extends LinearOpMode {
 
         // Automatic Goal Switching (with hysteresis so it doesn't flicker on the midline) //
         if (Robot_X > Goal_Switch_Band) {
-            Goal_X = 8;
+            Goal_X = 10;
         } else if (Robot_X < -Goal_Switch_Band) {
-            Goal_X = -8;
+            Goal_X = -101;
         } // otherwise keep the current goal
         // Automatic Goal Switching //
 
@@ -551,7 +551,7 @@ public class MainTeleOp extends LinearOpMode {
         Virtual_Delta_X = Virtual_Goal_X - Turret_X;
         Virtual_Delta_Y = Virtual_Goal_Y - Turret_Y;
         virtualDistance = Math.hypot(Virtual_Delta_X, Virtual_Delta_Y);
-        targetVelocity = ((3.64541*distance)+1320);
+        targetVelocity = ((3.64541*distance)+1340);
 
 
         dh_dt = (virtualDistance - distance) / Shot_Time;
