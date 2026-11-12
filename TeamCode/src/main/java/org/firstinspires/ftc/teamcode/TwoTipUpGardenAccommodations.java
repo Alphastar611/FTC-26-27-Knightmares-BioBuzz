@@ -33,7 +33,7 @@ public class TwoTipUpGardenAccommodations extends LinearOpMode {
     final int intakeVelocity = 2000;
     final int transferVelocity = 2800;
     final double flowerUp = 0;
-    final double flowerDown = 0.325;
+    final double flowerDown = 0.425;
     private Follower follower;
     private DcMotor Shooter;
     private DcMotor Intake;

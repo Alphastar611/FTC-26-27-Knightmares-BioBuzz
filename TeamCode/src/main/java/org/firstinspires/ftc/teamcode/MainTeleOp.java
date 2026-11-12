@@ -637,7 +637,7 @@ public class MainTeleOp extends LinearOpMode {
 
 
         // Flower //
-        SetServo(FlowerMechanism, false, Flower_Switch ? 0.325 : 0);
+        SetServo(FlowerMechanism, false, Flower_Switch ? 0.425 : 0);
         // Flower //
 
 

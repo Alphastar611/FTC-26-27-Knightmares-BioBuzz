@@ -33,7 +33,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     final int intakeVelocity = 2000;
     final int transferVelocity = 2800;
     final double flowerUp = 0;
-    final double flowerDown = 0.325;
+    final double flowerDown = 0.425;
     private Follower follower;
     private DcMotor Shooter;
     private DcMotor Intake;
@@ -42,7 +42,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(53.8534, 8.3578, 90);
-    private final Pose shootPreload = poseFactory.of(34, 12, 70);
+    private final Pose shootPreload = poseFactory.of(34, 14, 70);
     private final Pose gardenBufferStart = poseFactory.of(34, 12, 70);
     private final Pose gardenBuffer = poseFactory.of(16, 20, 270);
     private final Pose gardenCollect = poseFactory.of(6, 6, 270);
@@ -52,10 +52,10 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final Pose score2Segment2Start = poseFactory.of(34, 130, -90);
     private final Pose score2Segment2End = poseFactory.of(34, 130, 305);
     private final Pose flower1BufferStart = poseFactory.of(34, 130, 305);
-    private final Pose flower1Buffer = poseFactory.of(24, 46.75, 180);
-    private final Pose flower1Collect = poseFactory.of(6, 46.75, 180);
-    private final Pose flower1Shuffle = poseFactory.of(24, 46.75, 180);
-    private final Pose flower1Collect2 = poseFactory.of(6, 46.75, 180);
+    private final Pose flower1Buffer = poseFactory.of(24, 50, 180);
+    private final Pose flower1Collect = poseFactory.of(5, 50, 180);
+    private final Pose flower1Shuffle = poseFactory.of(24, 50, 180);
+    private final Pose flower1Collect2 = poseFactory.of(5, 50, 180);
     private final Pose score3 = poseFactory.of(34, 130, -55);
     private final Pose score3Control1 = poseFactory.of(38.093, 69.429, 0);
     private final Pose score3Segment1Start = poseFactory.of(34, 130, 180);
@@ -190,7 +190,7 @@ public class TwoTipUpGarden extends LinearOpMode {
             // Shoot Pre-Load //
                 shooterOn(),
                 follow(follower, shootPreload()),
-                waitMs(500),
+                waitMs(750),
                 startShooting(),
                 waitMs(1250),
                 stopShooting(),
@@ -204,7 +204,7 @@ public class TwoTipUpGarden extends LinearOpMode {
             // Grab from garden //
                 followWithTimeout(gardenCollect(), 1),
                 waitMs(250),
-                instant(() -> shooterVelocity = 1480),
+                instant(() -> shooterVelocity = 1520),
                 shooterOn(),
             // Grab from garden //
 
