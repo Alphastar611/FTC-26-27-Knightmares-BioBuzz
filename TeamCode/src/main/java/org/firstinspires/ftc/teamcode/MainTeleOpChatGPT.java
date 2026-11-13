@@ -236,7 +236,7 @@ public class MainTeleOpChatGPT extends LinearOpMode {
         Goal_Y = Base_Goal_Y;
 
         Target = 0;
-        Turret_KF = 0.25;
+        Turret_KF = 0.275;
         Normalized_Target_Heading = 0;
 
         Servo_Max_Range = 355;
