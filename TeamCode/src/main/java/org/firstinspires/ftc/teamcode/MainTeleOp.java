@@ -194,7 +194,7 @@ public class MainTeleOp extends LinearOpMode {
 
         // Shooter //
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(25, 0, 0, 14);
+        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 14);
         Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         shooterUsingEncoder = true;
         Shooter.setDirection(DcMotor.Direction.REVERSE);
@@ -489,7 +489,7 @@ public class MainTeleOp extends LinearOpMode {
         if (Robot_X > Goal_Switch_Band) {
             Goal_X = 10;
         } else if (Robot_X < -Goal_Switch_Band) {
-            Goal_X = -101;
+            Goal_X = -6;
         } // otherwise keep the current goal
         // Automatic Goal Switching //
 
