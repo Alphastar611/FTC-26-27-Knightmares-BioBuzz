@@ -500,7 +500,7 @@ public class MainTeleOpChatGPT extends LinearOpMode {
         if (Robot_X > Goal_Switch_Band) {
             Goal_X = 10;
         } else if (Robot_X < -Goal_Switch_Band) {
-            Goal_X = -6;
+            Goal_X = -10;
         }
 
         if (gamepad2.dpadRightWasPressed()) {
@@ -573,7 +573,7 @@ public class MainTeleOpChatGPT extends LinearOpMode {
 
         // Preserve the original shooter calibration based on real distance.
         targetVelocity =
-                (3.64541 * distance) + 1340;
+                (3.64541 * distance) + 1320;
 
         dh_dt =
                 (virtualDistance - distance) / Shot_Time;
