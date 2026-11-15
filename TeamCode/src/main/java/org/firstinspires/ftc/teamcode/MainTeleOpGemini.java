@@ -89,11 +89,13 @@ public class MainTeleOpGemini extends LinearOpMode {
     final double Refresh_Interval_Ms = 200;
 
     // Goal & Dynamic Side-Shift
-    double Goal_X = -8.0;
+    double Base_Goal_X = -10.0;
+    double Goal_X = -10.0;
     double Goal_Y = 18.0;
     final double Base_Goal_Y = 18.0;
     final double Goal_Switch_Band = 3.0;
     final double Max_Side_Shift = 6.0;    // Max inches to shift Goal_Y when at Y = ±72
+    final double Max_X_Side_Shift = 4.0;  // Max inches to shift Goal_X deeper toward 0 when at Y = ±72
     final double Field_Half_Width = 72.0; // Distance from center (0) to left/right wall
 
     // Turret
@@ -216,7 +218,8 @@ public class MainTeleOpGemini extends LinearOpMode {
         Delta_X = 0;
         Delta_Y = 0;
 
-        Goal_X = -8.0;
+        Base_Goal_X = -10.0;
+        Goal_X = Base_Goal_X;
         Goal_Y = Base_Goal_Y;
 
         Target = 0;
@@ -478,9 +481,9 @@ public class MainTeleOpGemini extends LinearOpMode {
 
     private void UpdateGoalAndToggles() {
         if (Robot_X > Goal_Switch_Band) {
-            Goal_X = 10.0;
+            Base_Goal_X = 10.0;
         } else if (Robot_X < -Goal_Switch_Band) {
-            Goal_X = -10.0;
+            Base_Goal_X = -10.0;
         }
 
         // Dynamic side-angle shift centered at Base_Goal_Y (18.0):
@@ -494,6 +497,12 @@ public class MainTeleOpGemini extends LinearOpMode {
 
         double sideRatio = clamp(yOffsetFromGoal / maxDistToWall, -1.0, 1.0);
         Goal_Y = Base_Goal_Y - (sideRatio * Max_Side_Shift);
+
+        // Shift Goal_X inward toward 0 when shooting from the side walls so shots enter deeper
+        double xDepthShift = Math.abs(sideRatio) * Max_X_Side_Shift;
+        Goal_X = Base_Goal_X < 0
+                ? (Base_Goal_X + xDepthShift)
+                : (Base_Goal_X - xDepthShift);
 
         if (gamepad2.dpadRightWasPressed()) {
             headingOffset -= headingStep;
