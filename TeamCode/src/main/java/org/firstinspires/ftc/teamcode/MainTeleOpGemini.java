@@ -74,8 +74,6 @@ public class MainTeleOpGemini extends LinearOpMode {
     final double Reset_Max_Speed = 1;
     final double Reset_Max_Heading_Velocity = 5;
 
-    // If Pinpoint stops producing trusted frames, stop using stale automatic aiming
-    // after this many milliseconds.
     final double Pinpoint_Aim_Timeout_Ms = 250;
     private final ElapsedTime pinpointGoodFrameTimer = new ElapsedTime();
 
@@ -119,8 +117,6 @@ public class MainTeleOpGemini extends LinearOpMode {
     final int VelocityStep = 20;
     int VelocityOffset;
 
-    // Hard limits for commanded shooter velocity.
-    // Adjust these to the safe tested operating range of your shooter.
     final double Min_Shooter_Velocity = 0;
     final double Max_Shooter_Velocity = 3000;
 
@@ -160,7 +156,6 @@ public class MainTeleOpGemini extends LinearOpMode {
     private static final double RESET_DELAY_MS = 500;
 
     private void Init() {
-        // Pinpoint
         Pinpoint.setEncoderResolution(
                 GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD
         );
@@ -175,7 +170,6 @@ public class MainTeleOpGemini extends LinearOpMode {
         resetPending = true;
         acceptNextPose = true;
 
-        // Shooter
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 14);
         Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -183,27 +177,22 @@ public class MainTeleOpGemini extends LinearOpMode {
         Shooter.setDirection(DcMotor.Direction.REVERSE);
         Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        // Intake
         Intake.setDirection(DcMotor.Direction.REVERSE);
         Intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         Intake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         ((DcMotorEx) Intake).setVelocityPIDFCoefficients(30, 0, 0, 16);
         Intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        // Transfer
         Transfer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         ((DcMotorEx) Transfer).setVelocityPIDFCoefficients(30, 0, 0, 14);
         Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         transferUsingEncoder = true;
 
-        // Turret
         ((ServoImplEx) Turret).setPwmRange(new PwmControl.PwmRange(500, 2500));
         Turret.setDirection(Servo.Direction.REVERSE);
 
-        // Flower
         FlowerMechanism.setDirection(Servo.Direction.FORWARD);
 
-        // Drive train
         FR.setDirection(DcMotor.Direction.REVERSE);
         BR.setDirection(DcMotor.Direction.REVERSE);
         FL.setDirection(DcMotor.Direction.FORWARD);
@@ -219,7 +208,6 @@ public class MainTeleOpGemini extends LinearOpMode {
         FL.setZeroPowerBehavior(driveZeroPower);
         BL.setZeroPowerBehavior(driveZeroPower);
 
-        // State
         Flower_Switch = false;
         Shooter_Switch = false;
         Turret_Switch = false;
@@ -246,6 +234,7 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void Telemetry2() {
+        telemetry.addData("Field Centric Active", hasGoodPose);
         telemetry.addData("Robot X", Robot_X);
         telemetry.addData("Robot Y", Robot_Y);
         telemetry.addData("Robot Yaw", Robot_Yaw);
@@ -345,7 +334,6 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void ReadInputs() {
-        // Manual pose reset
         if (gamepad1.backWasPressed()) {
             boolean stationary =
                     Math.abs(Robot_X_Velocity) <= Reset_Max_Speed
@@ -383,12 +371,10 @@ public class MainTeleOpGemini extends LinearOpMode {
             Robot_Heading_Velocity = 0;
         }
 
-        // Drive sticks
         Y = Deadband(gamepad1.left_stick_y);
         X = Deadband(gamepad1.left_stick_x);
         RX = Deadband(gamepad1.right_stick_x);
 
-        // Pinpoint
         Pinpoint_OK = false;
 
         try {
@@ -418,8 +404,6 @@ public class MainTeleOpGemini extends LinearOpMode {
             double vy,
             double hv
     ) {
-        // Correct finite-value semantics:
-        // true means the value is actually finite.
         if (isNotFinite(px)
                 || isNotFinite(py)
                 || isNotFinite(yaw)
@@ -437,7 +421,6 @@ public class MainTeleOpGemini extends LinearOpMode {
             double headingJump =
                     Math.abs(AngleUnit.DEGREES.normalize(yaw - Robot_Yaw));
 
-            // Absolute sanity boundary: never accept an enormous single-frame jump.
             if (jump > Absolute_Max_Pose_Jump) {
                 rejectedFrames++;
                 consecutiveRejects++;
@@ -476,11 +459,9 @@ public class MainTeleOpGemini extends LinearOpMode {
         }
 
         if (Math.abs(hv) <= Max_Heading_Velocity) {
-            // Light filtering on heading velocity too.
             Robot_Heading_Velocity =
                     Velocity_Filter_Alpha * hv
-                            + (1 - Velocity_Filter_Alpha)
-                            * Robot_Heading_Velocity;
+                            + (1 - Velocity_Filter_Alpha) * Robot_Heading_Velocity;
         }
 
         Pinpoint_OK = true;
@@ -496,7 +477,6 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void UpdateGoalAndToggles() {
-        // Automatic goal switching with hysteresis.
         if (Robot_X > Goal_Switch_Band) {
             Goal_X = 10;
         } else if (Robot_X < -Goal_Switch_Band) {
@@ -529,10 +509,7 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void ComputeAiming() {
-        // A trusted Pinpoint frame is required to update the aiming solution.
         if (!Pinpoint_OK) {
-            // Do not immediately replace the last solution with bad data.
-            // However, don't hold stale automatic aiming forever.
             if (pinpointGoodFrameTimer.milliseconds() >= Pinpoint_Aim_Timeout_Ms) {
                 Target_Ticks = 0.5;
                 velocityCorrection = 0;
@@ -555,23 +532,25 @@ public class MainTeleOpGemini extends LinearOpMode {
 
         distance = Math.hypot(Delta_X, Delta_Y);
 
-        // Shoot-on-the-move virtual goal.
         Virtual_Goal_X =
-                Goal_X - Robot_X_Velocity * Shot_Time;
+                Goal_X
+                        - Robot_X_Velocity * Shot_Time;
 
         Virtual_Goal_Y =
-                Goal_Y - Robot_Y_Velocity * Shot_Time;
+                Goal_Y
+                        - Robot_Y_Velocity * Shot_Time;
 
         Virtual_Delta_X =
-                Virtual_Goal_X - Turret_X;
+                Virtual_Goal_X
+                        - Turret_X;
 
         Virtual_Delta_Y =
-                Virtual_Goal_Y - Turret_Y;
+                Virtual_Goal_Y
+                        - Turret_Y;
 
         virtualDistance =
                 Math.hypot(Virtual_Delta_X, Virtual_Delta_Y);
 
-        // Preserve the original shooter calibration based on real distance.
         targetVelocity =
                 (3.64541 * distance) + 1320;
 
@@ -587,7 +566,6 @@ public class MainTeleOpGemini extends LinearOpMode {
                         )
                 );
 
-        // Aiming at the virtual goal.
         Target =
                 AngleUnit.DEGREES.normalize(
                         Math.toDegrees(
@@ -619,7 +597,6 @@ public class MainTeleOpGemini extends LinearOpMode {
             Normalized_Target_Heading =
                     rawTurretAngle + headingOffset;
         } else {
-            // In the dead zone, park at whichever travel end is closer.
             double deadZoneMid =
                     (Servo_Max_Range + 360) / 2;
 
@@ -629,7 +606,6 @@ public class MainTeleOpGemini extends LinearOpMode {
                             : Servo_Max_Range;
         }
 
-        // Final turret actuator safety clamp.
         Target_Ticks =
                 clamp(
                         Normalized_Target_Heading / Servo_Max_Range,
@@ -639,11 +615,23 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void Actuate() {
+        // Handle Drive Inputs (Field-Centric if position is set, Robot-Centric otherwise)
+        double inputX = X;
+        double inputY = Y;
+
+        if (hasGoodPose) {
+            double botHeading = Math.toRadians(Robot_Yaw);
+            double rotX = inputX * Math.cos(-botHeading) - inputY * Math.sin(-botHeading);
+            double rotY = inputX * Math.sin(-botHeading) + inputY * Math.cos(-botHeading);
+            inputX = rotX;
+            inputY = rotY;
+        }
+
         // Omni-Wheel drive normalization.
-        double fl = (Y - X) - RX;
-        double bl = (Y + X) - RX;
-        double fr = (Y + X) + RX;
-        double br = (Y - X) + RX;
+        double fl = (inputY - inputX) - RX;
+        double bl = (inputY + inputX) - RX;
+        double fr = (inputY + inputX) + RX;
+        double br = (inputY - inputX) + RX;
 
         double max =
                 Math.max(
@@ -699,7 +687,6 @@ public class MainTeleOpGemini extends LinearOpMode {
                 Flower_Switch ? 0.425 : 0
         );
 
-        // One rumble when turret first leaves its valid travel range.
         boolean turretOutOfRange =
                 Turret_Switch && !Turret_In_Range;
 
@@ -709,8 +696,6 @@ public class MainTeleOpGemini extends LinearOpMode {
 
         wasTurretOutOfRange = turretOutOfRange;
     }
-
-    // Cached hub writes
 
     private boolean NeedsWrite(
             double newV,
@@ -791,7 +776,6 @@ public class MainTeleOpGemini extends LinearOpMode {
             boolean isTurret,
             double pos
     ) {
-        // Servo output is always constrained to the SDK-safe range.
         pos = clamp(pos, 0.0, 1.0);
 
         double last =
