@@ -16,7 +16,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 
-@TeleOp(name = "MainTeleOp (100% NOT AI)")
+@TeleOp(name = "MainTeleOp")
 public class MainTeleOpGemini extends LinearOpMode {
 
     // Hardware
