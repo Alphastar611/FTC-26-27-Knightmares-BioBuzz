@@ -88,11 +88,13 @@ public class MainTeleOpGemini extends LinearOpMode {
     boolean forceWrite = false;
     final double Refresh_Interval_Ms = 200;
 
-    // Goal
-    int Goal_X;
-    int Goal_Y;
-    final int Base_Goal_Y = 18;
-    final double Goal_Switch_Band = 3;
+    // Goal & Dynamic Side-Shift
+    double Goal_X = -8.0;
+    double Goal_Y = 18.0;
+    final double Base_Goal_Y = 18.0;
+    final double Goal_Switch_Band = 3.0;
+    final double Max_Side_Shift = 6.0;    // Max inches to shift Goal_Y when at Y = ±72
+    final double Field_Half_Width = 72.0; // Distance from center (0) to left/right wall
 
     // Turret
     double Target_Ticks;
@@ -140,14 +142,10 @@ public class MainTeleOpGemini extends LinearOpMode {
     };
     private double lastIntakeVel = Double.NaN;
     private double lastTransferVel = Double.NaN;
-    private double lastTransferPower = Double.NaN;
     private double lastShooterVel = Double.NaN;
     private double lastShooterPower = Double.NaN;
     private double lastTurretPos = Double.NaN;
     private double lastFlowerPos = Double.NaN;
-
-    private boolean transferUsingEncoder = true;
-    private boolean shooterUsingEncoder = true;
 
     // Misc
     final boolean BrakeModeEnabled = false;
@@ -173,7 +171,6 @@ public class MainTeleOpGemini extends LinearOpMode {
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 14);
         Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooterUsingEncoder = true;
         Shooter.setDirection(DcMotor.Direction.REVERSE);
         Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
@@ -186,7 +183,6 @@ public class MainTeleOpGemini extends LinearOpMode {
         Transfer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         ((DcMotorEx) Transfer).setVelocityPIDFCoefficients(30, 0, 0, 14);
         Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        transferUsingEncoder = true;
 
         ((ServoImplEx) Turret).setPwmRange(new PwmControl.PwmRange(500, 2500));
         Turret.setDirection(Servo.Direction.REVERSE);
@@ -220,7 +216,7 @@ public class MainTeleOpGemini extends LinearOpMode {
         Delta_X = 0;
         Delta_Y = 0;
 
-        Goal_X = -8;
+        Goal_X = -8.0;
         Goal_Y = Base_Goal_Y;
 
         Target = 0;
@@ -230,6 +226,7 @@ public class MainTeleOpGemini extends LinearOpMode {
         Servo_Max_Range = 355;
         Target_Ticks = 0.5;
 
+        telemetry.setMsTransmissionInterval(100);
         pinpointGoodFrameTimer.reset();
     }
 
@@ -298,7 +295,10 @@ public class MainTeleOpGemini extends LinearOpMode {
             UpdateGoalAndToggles();
             ComputeAiming();
             Actuate();
-            Telemetry2();
+
+            if (forceWrite) {
+                Telemetry2();
+            }
         }
     }
 
@@ -478,10 +478,22 @@ public class MainTeleOpGemini extends LinearOpMode {
 
     private void UpdateGoalAndToggles() {
         if (Robot_X > Goal_Switch_Band) {
-            Goal_X = 10;
+            Goal_X = 10.0;
         } else if (Robot_X < -Goal_Switch_Band) {
-            Goal_X = -10;
+            Goal_X = -10.0;
         }
+
+        // Dynamic side-angle shift centered at Base_Goal_Y (18.0):
+        // - At Y = +72 (left wall),  sideRatio is +1.0 -> Goal_Y shifts right (Base_Goal_Y - Max_Side_Shift)
+        // - At Y = +18 (goal line),  sideRatio is  0.0 -> Goal_Y stays at Base_Goal_Y (18.0)
+        // - At Y = -72 (right wall), sideRatio is -1.0 -> Goal_Y shifts left  (Base_Goal_Y + Max_Side_Shift)
+        double yOffsetFromGoal = Robot_Y - Base_Goal_Y;
+        double maxDistToWall = yOffsetFromGoal >= 0
+                ? (Field_Half_Width - Base_Goal_Y)   // 54.0" to left wall (+72)
+                : (Field_Half_Width + Base_Goal_Y);  // 90.0" to right wall (-72)
+
+        double sideRatio = clamp(yOffsetFromGoal / maxDistToWall, -1.0, 1.0);
+        Goal_Y = Base_Goal_Y - (sideRatio * Max_Side_Shift);
 
         if (gamepad2.dpadRightWasPressed()) {
             headingOffset -= headingStep;
@@ -627,7 +639,7 @@ public class MainTeleOpGemini extends LinearOpMode {
             inputY = rotY;
         }
 
-        // Omni-Wheel drive normalization.
+        // Omni-Wheel drive normalization
         double fl = (inputY - inputX) - RX;
         double bl = (inputY + inputX) - RX;
         double fr = (inputY + inputX) + RX;
@@ -649,13 +661,13 @@ public class MainTeleOpGemini extends LinearOpMode {
 
         // Intake + Transfer
         if (gamepad1.right_trigger > 0.1) {
-            SetTransferVelocity();
+            SetTransferVelocity(2800);
             SetIntakeVelocity(2400);
         } else if (gamepad1.right_bumper) {
-            SetTransferPower();
+            SetTransferVelocity(-350);
             SetIntakeVelocity(-2400);
         } else {
-            SetTransferPower();
+            SetTransferVelocity(-350);
             SetIntakeVelocity(gamepad1.left_trigger * 2400);
         }
 
@@ -736,8 +748,6 @@ public class MainTeleOpGemini extends LinearOpMode {
     private void SetShooterVelocity(double v) {
         v = clampShooterVelocity(v);
 
-        SetShooterEncoderMode(true);
-
         if (NeedsWrite(v, lastShooterVel, 2)) {
             ((DcMotorEx) Shooter).setVelocity(v);
             lastShooterVel = v;
@@ -746,29 +756,11 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void SetShooterOff() {
-        SetShooterEncoderMode(false);
-
         if (NeedsWrite(0, lastShooterPower, 0.001)) {
             Shooter.setPower(0);
             lastShooterPower = 0;
             lastShooterVel = Double.NaN;
         }
-    }
-
-    private void SetShooterEncoderMode(boolean useEncoder) {
-        if (useEncoder == shooterUsingEncoder) {
-            return;
-        }
-
-        Shooter.setMode(
-                useEncoder
-                        ? DcMotor.RunMode.RUN_USING_ENCODER
-                        : DcMotor.RunMode.RUN_WITHOUT_ENCODER
-        );
-
-        shooterUsingEncoder = useEncoder;
-        lastShooterVel = Double.NaN;
-        lastShooterPower = Double.NaN;
     }
 
     private void SetServo(
@@ -794,40 +786,11 @@ public class MainTeleOpGemini extends LinearOpMode {
         }
     }
 
-    private void SetTransferVelocity() {
-        SetTransferEncoderMode(true);
-
-        if (NeedsWrite(2800, lastTransferVel, 1)) {
-            ((DcMotorEx) Transfer).setVelocity(2800);
-            lastTransferVel = 2800;
-            lastTransferPower = Double.NaN;
+    private void SetTransferVelocity(double v) {
+        if (NeedsWrite(v, lastTransferVel, 5)) {
+            ((DcMotorEx) Transfer).setVelocity(v);
+            lastTransferVel = v;
         }
-    }
-
-    private void SetTransferPower() {
-        SetTransferEncoderMode(false);
-
-        if (NeedsWrite(-0.125, lastTransferPower, 0.001)) {
-            Transfer.setPower(-0.125);
-            lastTransferPower = -0.125;
-            lastTransferVel = Double.NaN;
-        }
-    }
-
-    private void SetTransferEncoderMode(boolean useEncoder) {
-        if (useEncoder == transferUsingEncoder) {
-            return;
-        }
-
-        Transfer.setMode(
-                useEncoder
-                        ? DcMotor.RunMode.RUN_USING_ENCODER
-                        : DcMotor.RunMode.RUN_WITHOUT_ENCODER
-        );
-
-        transferUsingEncoder = useEncoder;
-        lastTransferVel = Double.NaN;
-        lastTransferPower = Double.NaN;
     }
 
     private double clamp(
