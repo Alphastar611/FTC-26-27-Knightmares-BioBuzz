@@ -132,12 +132,14 @@ public class TwoTipUpGarden extends LinearOpMode {
     public Path park() {
         return Paths.line(parkStart, park).linear(parkStart, park);
     }
+
     private Command followWithTimeout(Path path, double timeoutSec) {
         return sequential(
                 instant(pathTimer::reset),
                 follow(follower, path).until(() -> pathTimer.seconds() > timeoutSec)
         );
     }
+
     private Command stopShooting() {
         return parallel(
                 instant(() -> Intake.setPower(0)),
@@ -145,12 +147,14 @@ public class TwoTipUpGarden extends LinearOpMode {
                 instant(() -> Shooter.setPower(0))
         );
     }
-    private Command startShooting(){
+
+    private Command startShooting() {
         return parallel(
                 instant(() -> ((DcMotorEx) Intake).setVelocity(intakeVelocity)),
                 instant(this::transferFeed)
         );
     }
+
     private Command shooterOn() {
         return instant(() -> ((DcMotorEx) Shooter).setVelocity(shooterVelocity));
     }
@@ -168,7 +172,7 @@ public class TwoTipUpGarden extends LinearOpMode {
         ((DcMotorEx) Transfer).setVelocity(transferVelocity);
     }
 
-// ---------- Commands ----------
+    // ---------- Commands ----------
 
     private Command intakeOn() {
         return instant(() -> {
@@ -177,99 +181,99 @@ public class TwoTipUpGarden extends LinearOpMode {
         });
     }
 
-    private Command flowerDown(){
+    private Command flowerDown() {
         return instant(() -> FlowerMechanism.setPosition(flowerDown));
     }
-    private Command flowerUp(){
+
+    private Command flowerUp() {
         return instant(() -> FlowerMechanism.setPosition(flowerUp));
     }
 
     // Autonomous routine
     public Command autoRoutine() {
         return sequential(
-            // Shoot Pre-Load //
+                // Shoot Pre-Load //
                 shooterOn(),
                 follow(follower, shootPreload()),
                 waitMs(750),
                 startShooting(),
                 waitMs(1250),
                 stopShooting(),
-            // Shoot Pre-Load //
+                // Shoot Pre-Load //
 
-            // Drive to garden //
+                // Drive to garden //
                 follow(follower, gardenBuffer()),
                 intakeOn(),
-            // Drive to garden //
+                // Drive to garden //
 
-            // Grab from garden //
+                // Grab from garden //
                 followWithTimeout(gardenCollect(), 1),
                 waitMs(250),
                 instant(() -> shooterVelocity = 1520),
                 shooterOn(),
-            // Grab from garden //
+                // Grab from garden //
 
-            // Shoot for the second time //
+                // Shoot for the second time //
                 follow(follower, score2()),
                 waitMs(250),
                 startShooting(),
                 waitMs(1000),
                 stopShooting(),
-            // Shoot for the second time //
+                // Shoot for the second time //
 
-            // Drive to the first flower //
+                // Drive to the first flower //
                 follow(follower, flower1Buffer()),
                 flowerDown(),
                 intakeOn(),
                 waitMs(250),
-            // Drive to the first flower //
+                // Drive to the first flower //
 
-            // Grab out of the flower //
-                followWithTimeout(flower1Collect(),0.5),
+                // Grab out of the flower //
+                followWithTimeout(flower1Collect(), 0.5),
                 waitMs(250),
-                follow(follower,flower1Shuffle()),
-                followWithTimeout(flower1Collect2(),0.5),
+                follow(follower, flower1Shuffle()),
+                followWithTimeout(flower1Collect2(), 0.5),
                 waitMs(250),
                 shooterOn(),
-            // Grab out of the flower //
+                // Grab out of the flower //
 
-            // Score for the third time //
-                follow(follower,score3()),
+                // Score for the third time //
+                follow(follower, score3()),
                 flowerUp(),
                 waitMs(250),
                 startShooting(),
                 waitMs(1000),
                 stopShooting(),
-            // Score for the third time //
+                // Score for the third time //
 
-            // Drive to the second flower //
+                // Drive to the second flower //
                 follow(follower, flower2Buffer()),
                 flowerDown(),
                 waitMs(250),
                 intakeOn(),
-            // Drive to the second flower //
+                // Drive to the second flower //
 
-            // Grab out of the second flower //
-                followWithTimeout(flower2Collect(),0.5),
+                // Grab out of the second flower //
+                followWithTimeout(flower2Collect(), 0.5),
                 waitMs(250),
                 follow(follower, flower2Shuffle()),
-                followWithTimeout(flower2Collect2(),0.5),
+                followWithTimeout(flower2Collect2(), 0.5),
                 waitMs(250),
                 shooterOn(),
-            // Grab out of the second flower //
+                // Grab out of the second flower //
 
-            // Score for the fourth time //
+                // Score for the fourth time //
                 follow(follower, shoot4()),
                 waitMs(250),
                 flowerUp(),
                 startShooting(),
                 waitMs(1000),
                 stopShooting(),
-            // Score for the fourth time //
+                // Score for the fourth time //
 
-            // Park //
+                // Park //
                 follow(follower, park())
-            // Park //
-
+                // Park //
         );
     }
 
@@ -280,6 +284,9 @@ public class TwoTipUpGarden extends LinearOpMode {
         follower = Constants.create(hardwareMap);
         follower.setPose(start);
         follower.update();
+
+        // Save initial starting pose immediately in case Auto is stopped before moving
+        PoseStorage.saveFromPedro(follower.pose());
 
         Shooter = hardwareMap.get(DcMotor.class, "Shooter");
         Intake = hardwareMap.get(DcMotor.class, "Intake");
@@ -295,7 +302,6 @@ public class TwoTipUpGarden extends LinearOpMode {
         Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         // Shooter //
 
-
         // Intake //
         Intake.setDirection(DcMotor.Direction.REVERSE);
         Intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -303,7 +309,6 @@ public class TwoTipUpGarden extends LinearOpMode {
         ((DcMotorEx) Intake).setVelocityPIDFCoefficients(30, 0, 0, 16);
         Intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         // Intake //
-
 
         // Transfer //
         Transfer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -322,6 +327,9 @@ public class TwoTipUpGarden extends LinearOpMode {
             follower.update();
             Scheduler.execute();
 
+            // Continuously save current pose for TeleOp handoff
+            PoseStorage.saveFromPedro(follower.pose());
+
             telemetry.addData("x", follower.pose().x());
             telemetry.addData("y", follower.pose().y());
             telemetry.addData("heading", follower.pose().heading());
@@ -334,5 +342,9 @@ public class TwoTipUpGarden extends LinearOpMode {
 
             telemetry.update();
         }
+
+        // Final pose update and save right as Autonomous finishes
+        follower.update();
+        PoseStorage.saveFromPedro(follower.pose());
     }
 }

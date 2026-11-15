@@ -53,6 +53,7 @@ public class MainTeleOpGemini extends LinearOpMode {
     final double Start_X = -59;
     final double Start_Y = 70;
     final double Start_Heading = -90;
+    private boolean loadedFromAuto = false;
 
     // Pinpoint reliability
     boolean Pinpoint_OK = false;
@@ -164,11 +165,40 @@ public class MainTeleOpGemini extends LinearOpMode {
                 GoBildaPinpointDriver.EncoderDirection.REVERSED
         );
         Pinpoint.setOffsets(0, -2.5, DistanceUnit.INCH);
-        Pinpoint.resetPosAndIMU();
 
-        resetTimer.reset();
-        resetPending = true;
-        acceptNextPose = true;
+        if (PoseStorage.hasAutoPose) {
+            // Handoff from Pedro Auto: do NOT reset IMU, set transferred pose directly
+            loadedFromAuto = true;
+            Robot_X = PoseStorage.teleOpX;
+            Robot_Y = PoseStorage.teleOpY;
+            Robot_Yaw = PoseStorage.teleOpHeadingDeg;
+
+            Pinpoint.setPosition(
+                    new Pose2D(
+                            DistanceUnit.INCH,
+                            Robot_X,
+                            Robot_Y,
+                            AngleUnit.DEGREES,
+                            Robot_Yaw
+                    )
+            );
+
+            resetPending = false;
+            acceptNextPose = true;
+            hasGoodPose = true;
+            PoseStorage.hasAutoPose = false; // Consume so standalone TeleOp runs use defaults
+        } else {
+            // Standalone TeleOp run: recalibrate IMU and set default Start pose after 500ms
+            loadedFromAuto = false;
+            Pinpoint.resetPosAndIMU();
+            resetTimer.reset();
+            resetPending = true;
+            acceptNextPose = true;
+
+            Robot_X = Start_X;
+            Robot_Y = Start_Y;
+            Robot_Yaw = Start_Heading;
+        }
 
         Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 14);
@@ -211,10 +241,6 @@ public class MainTeleOpGemini extends LinearOpMode {
         Turret_Switch = false;
         Turret_In_Range = true;
 
-        Robot_X = Start_X;
-        Robot_Y = Start_Y;
-        Robot_Yaw = Start_Heading;
-
         Delta_X = 0;
         Delta_Y = 0;
 
@@ -234,6 +260,7 @@ public class MainTeleOpGemini extends LinearOpMode {
     }
 
     private void Telemetry2() {
+        telemetry.addData("Pose Source", loadedFromAuto ? "AUTO HANDOFF" : "DEFAULT / MANUAL");
         telemetry.addData("Field Centric Active", hasGoodPose);
         telemetry.addData("Robot X", Robot_X);
         telemetry.addData("Robot Y", Robot_Y);
@@ -279,7 +306,17 @@ public class MainTeleOpGemini extends LinearOpMode {
         }
 
         Init();
-        waitForStart();
+
+        // Display initialized pose while waiting for Start
+        while (!isStarted() && !isStopRequested()) {
+            telemetry.addData("Status", "Initialized - Ready");
+            telemetry.addData("Loaded From Auto", loadedFromAuto ? "YES" : "NO (Using Default)");
+            telemetry.addData("Start X", Robot_X);
+            telemetry.addData("Start Y", Robot_Y);
+            telemetry.addData("Start Yaw", Robot_Yaw);
+            telemetry.update();
+            sleep(50);
+        }
 
         if (isStopRequested()) {
             return;
@@ -344,6 +381,7 @@ public class MainTeleOpGemini extends LinearOpMode {
                             && Math.abs(Robot_Heading_Velocity) <= Reset_Max_Heading_Velocity;
 
             if (stationary) {
+                loadedFromAuto = false;
                 Pinpoint.resetPosAndIMU();
                 resetTimer.reset();
                 resetPending = true;
