@@ -6,11 +6,11 @@ public class DriveTrain {
 
     public static final double STICK_DEADBAND = 0.05;
 
-    private final RobotHardware hw;
+    private final RobotHardware Hardware;
     private final double[] lastDrive = {Double.NaN, Double.NaN, Double.NaN, Double.NaN};
 
-    public DriveTrain(RobotHardware hw) {
-        this.hw = hw;
+    public DriveTrain(RobotHardware Hardware) {
+        this.Hardware = Hardware;
     }
 
     public void update(double rawY, double rawX, double rawRX) {
@@ -24,14 +24,14 @@ public class DriveTrain {
         double br = (y - x) + rx;
         double max = Math.max(1.0, Math.max(Math.max(Math.abs(fl), Math.abs(bl)), Math.max(Math.abs(fr), Math.abs(br))));
 
-        setMotor(hw.FL, 0, fl / max);
-        setMotor(hw.BL, 1, bl / max);
-        setMotor(hw.FR, 2, fr / max);
-        setMotor(hw.BR, 3, br / max);
+        setMotor(Hardware.FL, 0, fl / max);
+        setMotor(Hardware.BL, 1, bl / max);
+        setMotor(Hardware.FR, 2, fr / max);
+        setMotor(Hardware.BR, 3, br / max);
     }
 
     private void setMotor(DcMotor motor, int idx, double power) {
-        if (hw.needsWrite(power, lastDrive[idx], 0.005, idx)) {
+        if (Hardware.needsWrite(power, lastDrive[idx], 0.005, idx)) {
             motor.setPower(power);
             lastDrive[idx] = power;
         }

@@ -8,7 +8,7 @@ public class Feeder {
     public static final double TRANSFER_FEED_VEL = 2800.0;
     public static final double TRANSFER_IDLE_POWER = -0.15;
 
-    private final RobotHardware hw;
+    private final RobotHardware Hardware;
     public boolean flowerOn = false;
 
     private boolean isFeeding = false;
@@ -18,7 +18,7 @@ public class Feeder {
     private double lastFlowerPos = Double.NaN;
 
     public Feeder(RobotHardware hw) {
-        this.hw = hw;
+        this.Hardware = hw;
     }
 
     public void toggleFlower() {
@@ -33,20 +33,20 @@ public class Feeder {
         // Transfer (slot 4)
         if (isFeeding) {
             if (!lastTransferWasVel) {
-                hw.Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                Hardware.Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                 lastTransferWasVel = true;
             }
-            if (hw.needsWrite(TRANSFER_FEED_VEL, lastTransferCmd, 5.0, 4)) {
-                hw.Transfer.setVelocity(TRANSFER_FEED_VEL);
+            if (Hardware.needsWrite(TRANSFER_FEED_VEL, lastTransferCmd, 5.0, 4)) {
+                Hardware.Transfer.setVelocity(TRANSFER_FEED_VEL);
                 lastTransferCmd = TRANSFER_FEED_VEL;
             }
         } else {
             if (lastTransferWasVel) {
-                hw.Transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                Hardware.Transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                 lastTransferWasVel = false;
             }
-            if (hw.needsWrite(TRANSFER_IDLE_POWER, lastTransferCmd, 0.001, 4)) {
-                hw.Transfer.setPower(TRANSFER_IDLE_POWER);
+            if (Hardware.needsWrite(TRANSFER_IDLE_POWER, lastTransferCmd, 0.001, 4)) {
+                Hardware.Transfer.setPower(TRANSFER_IDLE_POWER);
                 lastTransferCmd = TRANSFER_IDLE_POWER;
             }
         }
@@ -56,15 +56,15 @@ public class Feeder {
         double intakeCmd = isFeeding ? INTAKE_VEL
                 : rightBumper ? -INTAKE_VEL
                 : intakeTrigger * INTAKE_VEL;
-        if (hw.needsWrite(intakeCmd, lastIntakeVel, 5.0, 5)) {
-            hw.Intake.setVelocity(intakeCmd);
+        if (Hardware.needsWrite(intakeCmd, lastIntakeVel, 5.0, 5)) {
+            Hardware.Intake.setVelocity(intakeCmd);
             lastIntakeVel = intakeCmd;
         }
 
         // Flower servo (slot 7)
         double flowerCmd = flowerOn ? 0.425 : 0.0;
-        if (hw.needsWrite(flowerCmd, lastFlowerPos, 0.001, 7)) {
-            hw.FlowerMechanism.setPosition(flowerCmd);
+        if (Hardware.needsWrite(flowerCmd, lastFlowerPos, 0.001, 7)) {
+            Hardware.FlowerMechanism.setPosition(flowerCmd);
             lastFlowerPos = flowerCmd;
         }
     }

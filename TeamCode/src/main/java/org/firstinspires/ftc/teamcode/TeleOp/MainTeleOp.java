@@ -9,13 +9,13 @@ public class MainTeleOp extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        RobotHardware hw = new RobotHardware();
-        hw.init(hardwareMap);
+        RobotHardware Hardware = new RobotHardware();
+        Hardware.init(hardwareMap);
 
-        Localization localization = new Localization(hw);
-        DriveTrain drivetrain = new DriveTrain(hw);
-        Feeder feeder = new Feeder(hw);
-        TurretShooter turretShooter = new TurretShooter(hw);
+        Localization localization = new Localization(Hardware);
+        DriveTrain drivetrain = new DriveTrain(Hardware);
+        Feeder feeder = new Feeder(Hardware);
+        TurretShooter turretShooter = new TurretShooter(Hardware);
 
         ElapsedTime telemetryTimer = new ElapsedTime();
         ElapsedTime loopTimer = new ElapsedTime();
@@ -38,7 +38,7 @@ public class MainTeleOp extends LinearOpMode {
             loopMs = loopTimer.milliseconds();
             loopTimer.reset();
 
-            hw.beginLoop();
+            Hardware.beginLoop();
 
             // Driver 1 Controls
             if (gamepad1.backWasPressed()) {

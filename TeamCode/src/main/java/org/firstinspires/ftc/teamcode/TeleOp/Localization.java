@@ -14,7 +14,7 @@ public class Localization {
     public static final double START_HEADING = -90.0;
     public static final double VEL_SMOOTHING = 0.5;
 
-    private final RobotHardware hw;
+    private final RobotHardware Hardware;
     private final ElapsedTime resetTimer = new ElapsedTime();
     private boolean resetPending = false;
 
@@ -25,12 +25,12 @@ public class Localization {
     public boolean pinpointOK = false;
 
     public Localization(RobotHardware hw) {
-        this.hw = hw;
+        this.Hardware = hw;
         resetPose();
     }
 
     public void resetPose() {
-        hw.Pinpoint.resetPosAndIMU();
+        Hardware.Pinpoint.resetPosAndIMU();
         resetTimer.reset();
         resetPending = true;
     }
@@ -41,21 +41,21 @@ public class Localization {
 
     public void update() {
         if (resetPending && resetTimer.milliseconds() >= 500) {
-            hw.Pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, START_X, START_Y, AngleUnit.DEGREES, START_HEADING));
+            Hardware.Pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, START_X, START_Y, AngleUnit.DEGREES, START_HEADING));
             resetPending = false;
             velX = velY = headingVel = 0;
         }
 
         try {
-            hw.Pinpoint.update();
-            pinpointOK = hw.Pinpoint.getDeviceStatus() == GoBildaPinpointDriver.DeviceStatus.READY;
+            Hardware.Pinpoint.update();
+            pinpointOK = Hardware.Pinpoint.getDeviceStatus() == GoBildaPinpointDriver.DeviceStatus.READY;
             if (pinpointOK) {
-                double px = hw.Pinpoint.getPosX(DistanceUnit.INCH);
-                double py = hw.Pinpoint.getPosY(DistanceUnit.INCH);
-                double heading = hw.Pinpoint.getHeading(AngleUnit.DEGREES);
-                double vx = hw.Pinpoint.getVelX(DistanceUnit.INCH);
-                double vy = hw.Pinpoint.getVelY(DistanceUnit.INCH);
-                double hv = hw.Pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.DEGREES);
+                double px = Hardware.Pinpoint.getPosX(DistanceUnit.INCH);
+                double py = Hardware.Pinpoint.getPosY(DistanceUnit.INCH);
+                double heading = Hardware.Pinpoint.getHeading(AngleUnit.DEGREES);
+                double vx = Hardware.Pinpoint.getVelX(DistanceUnit.INCH);
+                double vy = Hardware.Pinpoint.getVelY(DistanceUnit.INCH);
+                double hv = Hardware.Pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.DEGREES);
 
                 if (Double.isFinite(px) && Double.isFinite(py) && Double.isFinite(heading)) {
                     x = px;

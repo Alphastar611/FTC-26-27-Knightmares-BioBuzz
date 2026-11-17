@@ -10,7 +10,7 @@ public class TurretShooter {
     public static final double SHOOTER_C = -50.807;
     public static final double SHOOTER_D = 2230.21;
     public static final double POS_SIDE_VEL_TRIM = -80.0;
-    public static final double MAX_SHOOTER_VEL = 3000.0;
+    public static final double MAX_SHOOTER_VEL = 1700.0;
     public static final double SHOT_TIME = 0.65;
     public static final double MAX_VEL_CORRECTION = 300.0;
 
