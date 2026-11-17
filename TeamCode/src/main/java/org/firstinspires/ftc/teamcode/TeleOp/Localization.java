@@ -9,7 +9,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit
 
 public class Localization {
 
-    public static final double START_X = -59.0;
+    public static final double START_X = -13.5;
     public static final double START_Y = 70.0;
     public static final double START_HEADING = -90.0;
     public static final double VEL_SMOOTHING = 0.5;

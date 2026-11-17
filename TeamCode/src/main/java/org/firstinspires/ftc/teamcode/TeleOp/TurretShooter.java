@@ -8,8 +8,8 @@ public class TurretShooter {
     public static final double SHOOTER_A = -0.00595183;
     public static final double SHOOTER_B = 1.01756;
     public static final double SHOOTER_C = -50.807;
-    public static final double SHOOTER_D = 2230.21;
-    public static final double POS_SIDE_VEL_TRIM = -80.0;
+    public static final double SHOOTER_D = 2270.21;
+    public static final double POS_SIDE_VEL_TRIM = -40;
     public static final double MAX_SHOOTER_VEL = 1700.0;
     public static final double SHOT_TIME = 0.65;
     public static final double MAX_VEL_CORRECTION = 300.0;
@@ -39,7 +39,7 @@ public class TurretShooter {
     public double distance = 0;
     public double targetVel = 0;
     public double velCorrection = 0;
-    public double targetTicks = 0.5;
+    public double targetTicks = 0.52;
 
     private boolean wasOutOfRange = false;
     private boolean lastShooterOff = false;
@@ -123,7 +123,7 @@ public class TurretShooter {
         }
 
         // 5. Actuate Turret (slot 6) & Shooter (slot 8)
-        double turretCmd = turretOn ? targetTicks : 0.5;
+        double turretCmd = turretOn ? targetTicks : 0.52;
         if (hw.needsWrite(turretCmd, lastTurretPos, 0.002, 6)) {
             hw.Turret.setPosition(turretCmd);
             lastTurretPos = turretCmd;
