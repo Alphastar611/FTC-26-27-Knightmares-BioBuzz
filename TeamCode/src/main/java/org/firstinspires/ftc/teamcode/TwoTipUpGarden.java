@@ -29,7 +29,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class TwoTipUpGarden extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
-    int shooterVelocity = 1520;
+    int shooterVelocity = 1480;
     final int intakeVelocity = 2000;
     final int transferVelocity = 2800;
     final double flowerUp = 0;
@@ -42,7 +42,7 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(53.8534, 8.3578, 90);
-    private final Pose shootPreload = poseFactory.of(34, 14, 70);
+    private final Pose shootPreload = poseFactory.of(34, 14, 75);
     private final Pose gardenBufferStart = poseFactory.of(34, 12, 70);
     private final Pose gardenBuffer = poseFactory.of(16, 20, 270);
     private final Pose gardenCollect = poseFactory.of(6, 6, 270);
@@ -209,7 +209,7 @@ public class TwoTipUpGarden extends LinearOpMode {
                 // Grab from garden //
                 followWithTimeout(gardenCollect(), 1),
                 waitMs(250),
-                instant(() -> shooterVelocity = 1520),
+                instant(() -> shooterVelocity = 1480),
                 shooterOn(),
                 // Grab from garden //
 

@@ -19,374 +19,214 @@ import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit
 @TeleOp(name = "MainTeleOp")
 public class MainTeleOpGemini extends LinearOpMode {
 
-    // Hardware
-    private DcMotor Shooter;
-    private DcMotor FR;
-    private DcMotor BR;
-    private Servo FlowerMechanism;
-    private DcMotor Intake;
-    private Servo Turret;
-    private DcMotor FL;
-    private DcMotor BL;
-    private DcMotor Transfer;
+    // =========================================================================
+    // 1. TUNING CONSTANTS (Edit these to tune driving, turret, and shooter)
+    // =========================================================================
+
+    // Drive & Starting Pose
+    static final double START_X = -59.0;
+    static final double START_Y = 70.0;
+    static final double START_HEADING = -90.0;
+    static final double DRIVER_HEADING_OFFSET = -90.0;
+    static final double STICK_DEADBAND = 0.05;
+    static final boolean BRAKE_MODE = false;
+
+    // Shooter Formula & Trims
+    static final double SHOOTER_SLOPE = 3.64541;
+    static final double SHOOTER_BASE_VEL = 1260.0;
+    static final double POS_SIDE_VEL_TRIM = -80.0;     // Applied when Robot_X > 0
+    static final double MIN_SHOOTER_VEL = 0.0;
+    static final double MAX_SHOOTER_VEL = 3000.0;
+    static final int VELOCITY_STEP = 20;
+
+    // Shoot-On-The-Move
+    static final double SHOT_TIME = 0.65;
+    static final double MAX_VEL_CORRECTION = 300.0;
+
+    // Turret & Goal Geometry
+    static final double BASE_GOAL_X_NEG = -10.0;
+    static final double BASE_GOAL_X_POS = 10.0;
+    static final double BASE_GOAL_Y = 18.0;
+    static final double GOAL_SWITCH_BAND = 3.0;
+    static final double MAX_SIDE_SHIFT = 6.0;
+    static final double MAX_X_SIDE_SHIFT = 4.0;
+    static final double FIELD_HALF_WIDTH = 72.0;
+
+    static final double TURRET_OFFSET_FORWARD = -2.0;
+    static final double SERVO_MAX_RANGE = 355.0;
+    static final double TURRET_KF = 0.275;
+    static final double POS_SIDE_HEADING_TRIM = -3.0;  // Applied when Robot_X > 0
+    static final int HEADING_STEP = 5;
+
+    // Intake & Transfer
+    static final double INTAKE_VEL = 2400.0;
+    static final double TRANSFER_FEED_VEL = 2800.0;
+    static final double TRANSFER_IDLE_POWER = -0.15;
+
+    // Pinpoint Reliability
+    static final double MAX_PLAUSIBLE_SPEED = 120.0;
+    static final double MAX_HEADING_VEL = 1500.0;
+    static final double MAX_POSE_JUMP = 12.0;
+    static final double MAX_HEADING_JUMP = 45.0;
+    static final double ABS_MAX_POSE_JUMP = 100.0;
+    static final int MAX_CONSECUTIVE_REJECTS = 5;
+    static final double VEL_FILTER_ALPHA = 0.5;
+    static final double RESET_DELAY_MS = 500.0;
+    static final double AIM_TIMEOUT_MS = 250.0;
+
+    // =========================================================================
+    // 2. HARDWARE & STATE VARIABLES
+    // =========================================================================
+
+    private DcMotor FL, BL, FR, BR, Shooter, Intake, Transfer;
+    private Servo Turret, FlowerMechanism;
     private GoBildaPinpointDriver Pinpoint;
 
-    // Driver inputs
-    double Y;
-    double X;
-    double RX;
-    final double Stick_Deadband = 0.05;
+    // Driver Inputs & Toggles
+    private double stickY, stickX, stickRX;
+    private boolean turretOn = false;
+    private boolean flowerOn = false;
+    private boolean shooterOn = false;
+    private boolean fieldCentricOn = false;
 
-    // Switches
-    boolean Turret_Switch;
-    boolean Flower_Switch;
-    boolean Shooter_Switch;
+    // Localization State
+    private double robotX = START_X, robotY = START_Y, robotYaw = START_HEADING;
+    private double velX = 0, velY = 0, headingVel = 0;
+    private boolean pinpointOK = false, hasGoodPose = false;
+    private boolean poseSetManually = false, acceptNextPose = true, resetPending = false;
+    private GoBildaPinpointDriver.DeviceStatus pinpointStatus;
+    private int rejectedFrames = 0, consecutiveRejects = 0;
 
-    // Localization
-    double Robot_Yaw;
-    double Robot_X;
-    double Robot_Y;
-    double Robot_X_Velocity = 0;
-    double Robot_Y_Velocity = 0;
-    double Robot_Heading_Velocity = 0;
+    // Aiming & Shooter State
+    private double goalX = BASE_GOAL_X_NEG, goalY = BASE_GOAL_Y;
+    private double distance = 0, targetVel = 0, velCorrection = 0, targetTicks = 0.5;
+    private boolean turretInRange = true, wasTurretOutOfRange = false;
+    private int headingOffset = 0, velocityOffset = 0;
 
-    final double Start_X = -59;
-    final double Start_Y = 70;
-    final double Start_Heading = -90;
-    private boolean loadedFromAuto = false;
-
-    // Pinpoint reliability
-    boolean Pinpoint_OK = false;
-    GoBildaPinpointDriver.DeviceStatus Pinpoint_Status;
-    boolean hasGoodPose = false;
-    boolean acceptNextPose = true;
-    int rejectedFrames = 0;
-    int consecutiveRejects = 0;
-    int pinpointErrors = 0;
-
-    final double Max_Plausible_Speed = 120;
-    final double Max_Heading_Velocity = 1500;
-    final double Max_Pose_Jump = 12;
-    final double Max_Heading_Jump = 45;
-    final double Absolute_Max_Pose_Jump = 100;
-    final int Max_Consecutive_Rejects = 5;
-    final double Velocity_Filter_Alpha = 0.5;
-
-    final double Reset_Max_Speed = 1;
-    final double Reset_Max_Heading_Velocity = 5;
-
-    final double Pinpoint_Aim_Timeout_Ms = 250;
-    private final ElapsedTime pinpointGoodFrameTimer = new ElapsedTime();
-
-    // Loop diagnostics
+    // Timers & Diagnostics
+    private final ElapsedTime resetTimer = new ElapsedTime();
+    private final ElapsedTime goodFrameTimer = new ElapsedTime();
     private final ElapsedTime loopTimer = new ElapsedTime();
     private final ElapsedTime refreshTimer = new ElapsedTime();
-    double loopMs = 0;
-    double maxLoopMs = 0;
-    int stallCount = 0;
-    final double Stall_Threshold_Ms = 50;
-    boolean firstLoop = true;
-    boolean forceWrite = false;
-    final double Refresh_Interval_Ms = 200;
+    private double loopMs = 0, maxLoopMs = 0;
+    private int stallCount = 0;
+    private boolean firstLoop = true, forceWrite = false;
 
-    // Goal & Dynamic Side-Shift
-    double Base_Goal_X = -10.0;
-    double Goal_X = -10.0;
-    double Goal_Y = 18.0;
-    final double Base_Goal_Y = 18.0;
-    final double Goal_Switch_Band = 3.0;
-    final double Max_Side_Shift = 6.0;    // Max inches to shift Goal_Y when at Y = ±72
-    final double Max_X_Side_Shift = 4.0;  // Max inches to shift Goal_X deeper toward 0 when at Y = ±72
-    final double Field_Half_Width = 72.0; // Distance from center (0) to left/right wall
+    // Hardware Write Cache
+    private final double[] lastDrive = {Double.NaN, Double.NaN, Double.NaN, Double.NaN};
+    private double lastIntakeVel = Double.NaN, lastTransferCmd = Double.NaN;
+    private double lastShooterVel = Double.NaN, lastShooterPower = Double.NaN;
+    private double lastTurretPos = Double.NaN, lastFlowerPos = Double.NaN;
+    private boolean lastTransferWasVel = false;
 
-    // Turret
-    double Target_Ticks;
-    double Servo_Max_Range;
-    double Target_Heading = 0;
-    double Turret_KF;
-    double Turret_KF2;
-    boolean Turret_In_Range;
-    boolean wasTurretOutOfRange = false;
-    double Normalized_Target_Heading;
-    double Target = 0;
-    double targetVelocity = 0;
-    final double Turret_Offset_Forward = -2;
-    int headingStep = 5;
-    double Turret_X;
-    double Turret_Y;
-    double yawRad = 0;
-    double Delta_X;
-    double Delta_Y;
+    // =========================================================================
+    // 3. MAIN OPCODE LOOP
+    // =========================================================================
 
-    // Shooter
-    final int VelocityStep = 20;
-    int VelocityOffset;
+    @Override
+    public void runOpMode() {
+        initHardware();
 
-    final double Min_Shooter_Velocity = 0;
-    final double Max_Shooter_Velocity = 3000;
+        while (!isStarted() && !isStopRequested()) {
+            telemetry.addData("Status", "Ready");
+            telemetry.addData("Start Pose", "(%.1f, %.1f) @ %.1f°", robotX, robotY, robotYaw);
+            telemetry.update();
+            sleep(50);
+        }
+        if (isStopRequested()) return;
 
-    // Shoot-on-the-move
-    final double Shot_Time = 0.65;
-    final double Max_Velocity_Correction = 300;
-    double KDT = 1;
-    double Virtual_Goal_X = 0;
-    double Virtual_Goal_Y = 0;
-    double Virtual_Delta_X = 0;
-    double Virtual_Delta_Y = 0;
-    double virtualDistance = 0;
-    int headingOffset = 0;
-    double dh_dt = 0;
-    double distance = 0;
-    double velocityCorrection = 0;
+        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+        loopTimer.reset();
+        refreshTimer.reset();
 
-    // Command caching
-    private final double[] lastDrive = {
-            Double.NaN, Double.NaN, Double.NaN, Double.NaN
-    };
-    private double lastIntakeVel = Double.NaN;
-    private double lastTransferVel = Double.NaN;
-    private double lastShooterVel = Double.NaN;
-    private double lastShooterPower = Double.NaN;
-    private double lastTurretPos = Double.NaN;
-    private double lastFlowerPos = Double.NaN;
+        while (opModeIsActive()) {
+            for (LynxModule hub : allHubs) hub.clearBulkCache();
 
-    // Misc
-    final boolean BrakeModeEnabled = false;
-    private final ElapsedTime resetTimer = new ElapsedTime();
-    private boolean resetPending = false;
-    private static final double RESET_DELAY_MS = 500;
+            updateDiagnostics();
+            readInputs();
+            updateGoalAndToggles();
+            computeAiming();
+            actuate();
 
-    private void Init() {
-        Pinpoint.setEncoderResolution(
-                GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD
-        );
-        Pinpoint.setEncoderDirections(
-                GoBildaPinpointDriver.EncoderDirection.FORWARD,
-                GoBildaPinpointDriver.EncoderDirection.REVERSED
-        );
-        Pinpoint.setOffsets(0, -2.5, DistanceUnit.INCH);
+            if (forceWrite) updateTelemetry();
+        }
+    }
 
-        if (PoseStorage.hasAutoPose) {
-            // Handoff from Pedro Auto: do NOT reset IMU, set transferred pose directly
-            loadedFromAuto = true;
-            Robot_X = PoseStorage.teleOpX;
-            Robot_Y = PoseStorage.teleOpY;
-            Robot_Yaw = PoseStorage.teleOpHeadingDeg;
+    private void initHardware() {
+        Shooter = hardwareMap.get(DcMotor.class, "Shooter");
+        Intake = hardwareMap.get(DcMotor.class, "Intake");
+        Transfer = hardwareMap.get(DcMotor.class, "Transfer");
+        FL = hardwareMap.get(DcMotor.class, "FL");
+        BL = hardwareMap.get(DcMotor.class, "BL");
+        FR = hardwareMap.get(DcMotor.class, "FR");
+        BR = hardwareMap.get(DcMotor.class, "BR");
+        Turret = hardwareMap.get(Servo.class, "Turret");
+        FlowerMechanism = hardwareMap.get(Servo.class, "Flower Mechanism");
+        Pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
 
-            Pinpoint.setPosition(
-                    new Pose2D(
-                            DistanceUnit.INCH,
-                            Robot_X,
-                            Robot_Y,
-                            AngleUnit.DEGREES,
-                            Robot_Yaw
-                    )
-            );
-
-            resetPending = false;
-            acceptNextPose = true;
-            hasGoodPose = true;
-            PoseStorage.hasAutoPose = false; // Consume so standalone TeleOp runs use defaults
-        } else {
-            // Standalone TeleOp run: recalibrate IMU and set default Start pose after 500ms
-            loadedFromAuto = false;
-            Pinpoint.resetPosAndIMU();
-            resetTimer.reset();
-            resetPending = true;
-            acceptNextPose = true;
-
-            Robot_X = Start_X;
-            Robot_Y = Start_Y;
-            Robot_Yaw = Start_Heading;
+        for (LynxModule hub : hardwareMap.getAll(LynxModule.class)) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
 
-        Shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Shooter).setVelocityPIDFCoefficients(50, 0, 0, 14);
-        Shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Shooter.setDirection(DcMotor.Direction.REVERSE);
-        Shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        // Pinpoint Setup
+        Pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        Pinpoint.setEncoderDirections(
+                GoBildaPinpointDriver.EncoderDirection.FORWARD,
+                GoBildaPinpointDriver.EncoderDirection.REVERSED);
+        Pinpoint.setOffsets(0, -2.5, DistanceUnit.INCH);
+        Pinpoint.resetPosAndIMU();
+        resetTimer.reset();
+        resetPending = true;
 
-        Intake.setDirection(DcMotor.Direction.REVERSE);
-        Intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        Intake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Intake).setVelocityPIDFCoefficients(30, 0, 0, 16);
-        Intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        Transfer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        ((DcMotorEx) Transfer).setVelocityPIDFCoefficients(30, 0, 0, 14);
-        Transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        ((ServoImplEx) Turret).setPwmRange(new PwmControl.PwmRange(500, 2500));
-        Turret.setDirection(Servo.Direction.REVERSE);
-
-        FlowerMechanism.setDirection(Servo.Direction.FORWARD);
+        // Motor Setup
+        setupVelocityMotor(Shooter, DcMotor.Direction.REVERSE, 50, 14);
+        setupVelocityMotor(Intake, DcMotor.Direction.REVERSE, 30, 16);
+        setupVelocityMotor(Transfer, DcMotor.Direction.FORWARD, 30, 14);
 
         FR.setDirection(DcMotor.Direction.REVERSE);
         BR.setDirection(DcMotor.Direction.REVERSE);
         FL.setDirection(DcMotor.Direction.FORWARD);
         BL.setDirection(DcMotor.Direction.FORWARD);
 
-        DcMotor.ZeroPowerBehavior driveZeroPower =
-                BrakeModeEnabled
-                        ? DcMotor.ZeroPowerBehavior.BRAKE
-                        : DcMotor.ZeroPowerBehavior.FLOAT;
+        DcMotor.ZeroPowerBehavior driveZero = BRAKE_MODE
+                ? DcMotor.ZeroPowerBehavior.BRAKE : DcMotor.ZeroPowerBehavior.FLOAT;
+        FL.setZeroPowerBehavior(driveZero);
+        BL.setZeroPowerBehavior(driveZero);
+        FR.setZeroPowerBehavior(driveZero);
+        BR.setZeroPowerBehavior(driveZero);
 
-        FR.setZeroPowerBehavior(driveZeroPower);
-        BR.setZeroPowerBehavior(driveZeroPower);
-        FL.setZeroPowerBehavior(driveZeroPower);
-        BL.setZeroPowerBehavior(driveZeroPower);
-
-        Flower_Switch = false;
-        Shooter_Switch = false;
-        Turret_Switch = false;
-        Turret_In_Range = true;
-
-        Delta_X = 0;
-        Delta_Y = 0;
-
-        Base_Goal_X = -10.0;
-        Goal_X = Base_Goal_X;
-        Goal_Y = Base_Goal_Y;
-
-        Target = 0;
-        Turret_KF = 0.275;
-        Normalized_Target_Heading = 0;
-
-        Servo_Max_Range = 355;
-        Target_Ticks = 0.5;
+        // Servo Setup
+        ((ServoImplEx) Turret).setPwmRange(new PwmControl.PwmRange(500, 2500));
+        Turret.setDirection(Servo.Direction.REVERSE);
+        FlowerMechanism.setDirection(Servo.Direction.FORWARD);
 
         telemetry.setMsTransmissionInterval(100);
-        pinpointGoodFrameTimer.reset();
+        goodFrameTimer.reset();
     }
 
-    private void Telemetry2() {
-        telemetry.addData("Pose Source", loadedFromAuto ? "AUTO HANDOFF" : "DEFAULT / MANUAL");
-        telemetry.addData("Field Centric Active", hasGoodPose);
-        telemetry.addData("Robot X", Robot_X);
-        telemetry.addData("Robot Y", Robot_Y);
-        telemetry.addData("Robot Yaw", Robot_Yaw);
-        telemetry.addData("Goal X", Goal_X);
-        telemetry.addData("Goal Y", Goal_Y);
-        telemetry.addData("Delta X", Delta_X);
-        telemetry.addData("Delta Y", Delta_Y);
-        telemetry.addData("Distance from goal", distance);
-        telemetry.addData("Shooter Velocity", ((DcMotorEx) Shooter).getVelocity());
-        telemetry.addData("Target Velocity", targetVelocity);
-        telemetry.addData("Commanded Shooter Velocity",
-                clampShooterVelocity(targetVelocity + velocityCorrection + VelocityOffset));
-        telemetry.addData("Heading Offset", headingOffset);
-        telemetry.addData("Velocity Offset", VelocityOffset);
-        telemetry.addData("Pinpoint OK", Pinpoint_OK);
-        telemetry.addData("Pinpoint Status", Pinpoint_Status);
-        telemetry.addData("Rejected Frames", rejectedFrames);
-        telemetry.addData("Pinpoint Errors", pinpointErrors);
-        telemetry.addData("Consecutive Rejects", consecutiveRejects);
-        telemetry.addData("Loop ms", loopMs);
-        telemetry.addData("Max Loop ms", maxLoopMs);
-        telemetry.addData("Stall Count", stallCount);
-        telemetry.update();
+    private void setupVelocityMotor(DcMotor motor, DcMotor.Direction dir, double p, double f) {
+        motor.setDirection(dir);
+        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        ((DcMotorEx) motor).setVelocityPIDFCoefficients(p, 0, 0, f);
+        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
-    @Override
-    public void runOpMode() {
-        Shooter = hardwareMap.get(DcMotor.class, "Shooter");
-        FR = hardwareMap.get(DcMotor.class, "FR");
-        BR = hardwareMap.get(DcMotor.class, "BR");
-        FlowerMechanism = hardwareMap.get(Servo.class, "Flower Mechanism");
-        Intake = hardwareMap.get(DcMotor.class, "Intake");
-        Turret = hardwareMap.get(Servo.class, "Turret");
-        FL = hardwareMap.get(DcMotor.class, "FL");
-        BL = hardwareMap.get(DcMotor.class, "BL");
-        Transfer = hardwareMap.get(DcMotor.class, "Transfer");
-        Pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+    // =========================================================================
+    // 4. INPUTS, LOCALIZATION & TOGGLES
+    // =========================================================================
 
-        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
-        for (LynxModule hub : allHubs) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        }
-
-        Init();
-
-        // Display initialized pose while waiting for Start
-        while (!isStarted() && !isStopRequested()) {
-            telemetry.addData("Status", "Initialized - Ready");
-            telemetry.addData("Loaded From Auto", loadedFromAuto ? "YES" : "NO (Using Default)");
-            telemetry.addData("Start X", Robot_X);
-            telemetry.addData("Start Y", Robot_Y);
-            telemetry.addData("Start Yaw", Robot_Yaw);
-            telemetry.update();
-            sleep(50);
-        }
-
-        if (isStopRequested()) {
-            return;
-        }
-
-        loopTimer.reset();
-        refreshTimer.reset();
-
-        while (opModeIsActive()) {
-            for (LynxModule hub : allHubs) {
-                hub.clearBulkCache();
-            }
-
-            UpdateLoopDiagnostics();
-            ReadInputs();
-            UpdateGoalAndToggles();
-            ComputeAiming();
-            Actuate();
-
-            if (forceWrite) {
-                Telemetry2();
-            }
-        }
-    }
-
-    private void UpdateLoopDiagnostics() {
-        loopMs = loopTimer.milliseconds();
-        loopTimer.reset();
-
-        if (firstLoop) {
-            firstLoop = false;
-        } else {
-            if (loopMs > maxLoopMs) {
-                maxLoopMs = loopMs;
-            }
-
-            if (loopMs > Stall_Threshold_Ms) {
-                stallCount++;
-            }
-        }
-
-        if (gamepad2.backWasPressed()) {
-            maxLoopMs = 0;
-            stallCount = 0;
-            rejectedFrames = 0;
-            pinpointErrors = 0;
-            consecutiveRejects = 0;
-        }
-
-        forceWrite = refreshTimer.milliseconds() >= Refresh_Interval_Ms;
-
-        if (forceWrite) {
-            refreshTimer.reset();
-        }
-    }
-
-    private void ReadInputs() {
+    private void readInputs() {
+        // Manual Pose Reset (gamepad1 Back)
         if (gamepad1.backWasPressed()) {
-            boolean stationary =
-                    Math.abs(Robot_X_Velocity) <= Reset_Max_Speed
-                            && Math.abs(Robot_Y_Velocity) <= Reset_Max_Speed
-                            && Math.abs(Robot_Heading_Velocity) <= Reset_Max_Heading_Velocity;
-
+            boolean stationary = Math.abs(velX) <= 1.0 && Math.abs(velY) <= 1.0 && Math.abs(headingVel) <= 5.0;
             if (stationary) {
-                loadedFromAuto = false;
                 Pinpoint.resetPosAndIMU();
                 resetTimer.reset();
                 resetPending = true;
                 acceptNextPose = true;
                 hasGoodPose = false;
+                poseSetManually = true;
                 consecutiveRejects = 0;
             } else {
                 gamepad1.rumble(150);
@@ -394,465 +234,312 @@ public class MainTeleOpGemini extends LinearOpMode {
         }
 
         if (resetPending && resetTimer.milliseconds() >= RESET_DELAY_MS) {
-            Pinpoint.setPosition(
-                    new Pose2D(
-                            DistanceUnit.INCH,
-                            Start_X,
-                            Start_Y,
-                            AngleUnit.DEGREES,
-                            Start_Heading
-                    )
-            );
-
+            Pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, START_X, START_Y, AngleUnit.DEGREES, START_HEADING));
             resetPending = false;
             acceptNextPose = true;
             hasGoodPose = false;
-            Robot_X_Velocity = 0;
-            Robot_Y_Velocity = 0;
-            Robot_Heading_Velocity = 0;
+            velX = velY = headingVel = 0;
         }
 
-        Y = Deadband(gamepad1.left_stick_y);
-        X = Deadband(gamepad1.left_stick_x);
-        RX = Deadband(gamepad1.right_stick_x);
+        stickY = deadband(gamepad1.left_stick_y);
+        stickX = deadband(gamepad1.left_stick_x);
+        stickRX = deadband(gamepad1.right_stick_x);
 
-        Pinpoint_OK = false;
-
+        pinpointOK = false;
         try {
             Pinpoint.update();
-            Pinpoint_Status = Pinpoint.getDeviceStatus();
-
-            if (Pinpoint_Status == GoBildaPinpointDriver.DeviceStatus.READY) {
-                AcceptPinpointFrame(
+            pinpointStatus = Pinpoint.getDeviceStatus();
+            if (pinpointStatus == GoBildaPinpointDriver.DeviceStatus.READY) {
+                processPinpointFrame(
                         Pinpoint.getPosX(DistanceUnit.INCH),
                         Pinpoint.getPosY(DistanceUnit.INCH),
                         Pinpoint.getHeading(AngleUnit.DEGREES),
                         Pinpoint.getVelX(DistanceUnit.INCH),
                         Pinpoint.getVelY(DistanceUnit.INCH),
-                        Pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.DEGREES)
-                );
+                        Pinpoint.getHeadingVelocity(UnnormalizedAngleUnit.DEGREES));
             }
-        } catch (Exception e) {
-            pinpointErrors++;
+        } catch (Exception ignored) {
         }
     }
 
-    private void AcceptPinpointFrame(
-            double px,
-            double py,
-            double yaw,
-            double vx,
-            double vy,
-            double hv
-    ) {
-        if (isNotFinite(px)
-                || isNotFinite(py)
-                || isNotFinite(yaw)
-                || isNotFinite(vx)
-                || isNotFinite(vy)
-                || isNotFinite(hv)) {
+    private void processPinpointFrame(double px, double py, double yaw, double vx, double vy, double hv) {
+        if (!Double.isFinite(px) || !Double.isFinite(py) || !Double.isFinite(yaw)
+                || !Double.isFinite(vx) || !Double.isFinite(vy) || !Double.isFinite(hv)) {
             rejectedFrames++;
             return;
         }
 
-        boolean jumpy = false;
-
         if (hasGoodPose && !acceptNextPose) {
-            double jump = Math.hypot(px - Robot_X, py - Robot_Y);
-            double headingJump =
-                    Math.abs(AngleUnit.DEGREES.normalize(yaw - Robot_Yaw));
+            double jump = Math.hypot(px - robotX, py - robotY);
+            double headingJump = Math.abs(AngleUnit.DEGREES.normalize(yaw - robotYaw));
 
-            if (jump > Absolute_Max_Pose_Jump) {
+            if (jump > ABS_MAX_POSE_JUMP) {
                 rejectedFrames++;
                 consecutiveRejects++;
                 return;
             }
-
-            jumpy =
-                    jump > Max_Pose_Jump
-                            || headingJump > Max_Heading_Jump;
-        }
-
-        if (jumpy && consecutiveRejects < Max_Consecutive_Rejects) {
-            consecutiveRejects++;
-            rejectedFrames++;
-            return;
+            if ((jump > MAX_POSE_JUMP || headingJump > MAX_HEADING_JUMP)
+                    && consecutiveRejects < MAX_CONSECUTIVE_REJECTS) {
+                consecutiveRejects++;
+                rejectedFrames++;
+                return;
+            }
         }
 
         consecutiveRejects = 0;
         acceptNextPose = false;
         hasGoodPose = true;
+        robotX = px;
+        robotY = py;
+        robotYaw = yaw;
 
-        Robot_X = px;
-        Robot_Y = py;
-        Robot_Yaw = yaw;
-
-        if (Math.abs(vx) <= Max_Plausible_Speed
-                && Math.abs(vy) <= Max_Plausible_Speed) {
-
-            Robot_X_Velocity =
-                    Velocity_Filter_Alpha * vx
-                            + (1 - Velocity_Filter_Alpha) * Robot_X_Velocity;
-
-            Robot_Y_Velocity =
-                    Velocity_Filter_Alpha * vy
-                            + (1 - Velocity_Filter_Alpha) * Robot_Y_Velocity;
+        if (Math.abs(vx) <= MAX_PLAUSIBLE_SPEED && Math.abs(vy) <= MAX_PLAUSIBLE_SPEED) {
+            velX = VEL_FILTER_ALPHA * vx + (1 - VEL_FILTER_ALPHA) * velX;
+            velY = VEL_FILTER_ALPHA * vy + (1 - VEL_FILTER_ALPHA) * velY;
+        }
+        if (Math.abs(hv) <= MAX_HEADING_VEL) {
+            headingVel = VEL_FILTER_ALPHA * hv + (1 - VEL_FILTER_ALPHA) * headingVel;
         }
 
-        if (Math.abs(hv) <= Max_Heading_Velocity) {
-            Robot_Heading_Velocity =
-                    Velocity_Filter_Alpha * hv
-                            + (1 - Velocity_Filter_Alpha) * Robot_Heading_Velocity;
-        }
-
-        Pinpoint_OK = true;
-        pinpointGoodFrameTimer.reset();
+        pinpointOK = true;
+        goodFrameTimer.reset();
     }
 
-    private boolean isNotFinite(double v) {
-        return !Double.isFinite(v);
+    private void updateGoalAndToggles() {
+        // Select Goal X side
+        double baseGoalX = (robotX > GOAL_SWITCH_BAND) ? BASE_GOAL_X_POS
+                : (robotX < -GOAL_SWITCH_BAND) ? BASE_GOAL_X_NEG
+                : (goalX >= 0 ? BASE_GOAL_X_POS : BASE_GOAL_X_NEG);
+
+        // Dynamic Goal Y & X side-shift
+        double yOffset = robotY - BASE_GOAL_Y;
+        double maxWallDist = (yOffset >= 0) ? (FIELD_HALF_WIDTH - BASE_GOAL_Y) : (FIELD_HALF_WIDTH + BASE_GOAL_Y);
+        double sideRatio = clamp(yOffset / maxWallDist, -1.0, 1.0);
+        double sideShift = sideRatio * MAX_SIDE_SHIFT;
+        double depthShift = Math.abs(sideRatio) * MAX_X_SIDE_SHIFT;
+
+        goalY = (baseGoalX < 0) ? (BASE_GOAL_Y - sideShift) : (BASE_GOAL_Y + sideShift);
+        goalX = (baseGoalX < 0) ? (baseGoalX + depthShift) : (baseGoalX - depthShift);
+
+        // Driver 1 Toggles
+        if (gamepad1.aWasPressed()) turretOn = !turretOn;
+        if (gamepad1.bWasPressed()) shooterOn = !shooterOn;
+        if (gamepad1.xWasPressed()) fieldCentricOn = !fieldCentricOn;
+        if (gamepad1.leftBumperWasPressed()) flowerOn = !flowerOn;
+
+        // Driver 2 Live Trims
+        if (gamepad2.dpadRightWasPressed()) headingOffset -= HEADING_STEP;
+        if (gamepad2.dpadLeftWasPressed()) headingOffset += HEADING_STEP;
+        if (gamepad2.dpadDownWasPressed()) velocityOffset -= VELOCITY_STEP;
+        if (gamepad2.dpadUpWasPressed()) velocityOffset += VELOCITY_STEP;
     }
 
-    private double Deadband(double value) {
-        return Math.abs(value) < Stick_Deadband ? 0 : value;
-    }
+    // =========================================================================
+    // 5. AIMING & ACTUATION
+    // =========================================================================
 
-    private void UpdateGoalAndToggles() {
-        if (Robot_X > Goal_Switch_Band) {
-            Base_Goal_X = 10.0;
-        } else if (Robot_X < -Goal_Switch_Band) {
-            Base_Goal_X = -10.0;
-        }
-
-        // Dynamic side-angle shift centered at Base_Goal_Y (18.0):
-        // - At Y = +72 (left wall),  sideRatio is +1.0 -> Goal_Y shifts right (Base_Goal_Y - Max_Side_Shift)
-        // - At Y = +18 (goal line),  sideRatio is  0.0 -> Goal_Y stays at Base_Goal_Y (18.0)
-        // - At Y = -72 (right wall), sideRatio is -1.0 -> Goal_Y shifts left  (Base_Goal_Y + Max_Side_Shift)
-        double yOffsetFromGoal = Robot_Y - Base_Goal_Y;
-        double maxDistToWall = yOffsetFromGoal >= 0
-                ? (Field_Half_Width - Base_Goal_Y)   // 54.0" to left wall (+72)
-                : (Field_Half_Width + Base_Goal_Y);  // 90.0" to right wall (-72)
-
-        double sideRatio = clamp(yOffsetFromGoal / maxDistToWall, -1.0, 1.0);
-        Goal_Y = Base_Goal_Y - (sideRatio * Max_Side_Shift);
-
-        // Shift Goal_X inward toward 0 when shooting from the side walls so shots enter deeper
-        double xDepthShift = Math.abs(sideRatio) * Max_X_Side_Shift;
-        Goal_X = Base_Goal_X < 0
-                ? (Base_Goal_X + xDepthShift)
-                : (Base_Goal_X - xDepthShift);
-
-        if (gamepad2.dpadRightWasPressed()) {
-            headingOffset -= headingStep;
-        } else if (gamepad2.dpadLeftWasPressed()) {
-            headingOffset += headingStep;
-        }
-
-        if (gamepad2.dpadDownWasPressed()) {
-            VelocityOffset -= VelocityStep;
-        } else if (gamepad2.dpadUpWasPressed()) {
-            VelocityOffset += VelocityStep;
-        }
-
-        if (gamepad1.aWasPressed()) {
-            Turret_Switch = !Turret_Switch;
-        }
-
-        if (gamepad1.leftBumperWasPressed()) {
-            Flower_Switch = !Flower_Switch;
-        }
-
-        if (gamepad1.bWasPressed()) {
-            Shooter_Switch = !Shooter_Switch;
-        }
-    }
-
-    private void ComputeAiming() {
-        if (!Pinpoint_OK) {
-            if (pinpointGoodFrameTimer.milliseconds() >= Pinpoint_Aim_Timeout_Ms) {
-                Target_Ticks = 0.5;
-                velocityCorrection = 0;
+    private void computeAiming() {
+        if (!pinpointOK) {
+            if (goodFrameTimer.milliseconds() >= AIM_TIMEOUT_MS) {
+                targetTicks = 0.5;
+                velCorrection = 0;
             }
             return;
         }
 
-        yawRad = Math.toRadians(Robot_Yaw);
+        double yawRad = Math.toRadians(robotYaw);
+        double turretX = robotX + TURRET_OFFSET_FORWARD * Math.cos(yawRad);
+        double turretY = robotY + TURRET_OFFSET_FORWARD * Math.sin(yawRad);
 
-        Turret_X =
-                Robot_X
-                        + Turret_Offset_Forward * Math.cos(yawRad);
+        // Real & Virtual (shoot-on-the-move) distances
+        distance = Math.hypot(goalX - turretX, goalY - turretY);
+        double virtualDeltaX = (goalX - velX * SHOT_TIME) - turretX;
+        double virtualDeltaY = (goalY - velY * SHOT_TIME) - turretY;
+        double virtualDist = Math.hypot(virtualDeltaX, virtualDeltaY);
 
-        Turret_Y =
-                Robot_Y
-                        + Turret_Offset_Forward * Math.sin(yawRad);
+        // Shooter Velocity
+        double sideVelTrim = (robotX > 0) ? POS_SIDE_VEL_TRIM : 0;
+        targetVel = (SHOOTER_SLOPE * distance) + SHOOTER_BASE_VEL + sideVelTrim;
+        velCorrection = clamp((virtualDist - distance) / SHOT_TIME, -MAX_VEL_CORRECTION, MAX_VEL_CORRECTION);
 
-        Delta_X = Goal_X - Turret_X;
-        Delta_Y = Goal_Y - Turret_Y;
+        // Turret Angle
+        double targetAngle = AngleUnit.DEGREES.normalize(
+                Math.toDegrees(Math.atan2(virtualDeltaY, virtualDeltaX)) + 180);
+        double leadAngle = clamp(TURRET_KF * headingVel, -15, 15);
+        double rawTurretAngle = (((targetAngle - leadAngle) - robotYaw) % 360 + 360) % 360;
 
-        distance = Math.hypot(Delta_X, Delta_Y);
+        turretInRange = rawTurretAngle <= SERVO_MAX_RANGE;
+        double sideHeadingTrim = (robotX > 0) ? POS_SIDE_HEADING_TRIM : 0;
 
-        Virtual_Goal_X =
-                Goal_X
-                        - Robot_X_Velocity * Shot_Time;
+        double normalizedHeading = turretInRange
+                ? (rawTurretAngle + headingOffset + sideHeadingTrim)
+                : (rawTurretAngle >= (SERVO_MAX_RANGE + 360) / 2.0 ? 0 : SERVO_MAX_RANGE);
 
-        Virtual_Goal_Y =
-                Goal_Y
-                        - Robot_Y_Velocity * Shot_Time;
-
-        Virtual_Delta_X =
-                Virtual_Goal_X
-                        - Turret_X;
-
-        Virtual_Delta_Y =
-                Virtual_Goal_Y
-                        - Turret_Y;
-
-        virtualDistance =
-                Math.hypot(Virtual_Delta_X, Virtual_Delta_Y);
-
-        targetVelocity =
-                (3.64541 * distance) + 1320;
-
-        dh_dt =
-                (virtualDistance - distance) / Shot_Time;
-
-        velocityCorrection =
-                Math.max(
-                        -Max_Velocity_Correction,
-                        Math.min(
-                                Max_Velocity_Correction,
-                                dh_dt * KDT
-                        )
-                );
-
-        Target =
-                AngleUnit.DEGREES.normalize(
-                        Math.toDegrees(
-                                Math.atan2(
-                                        Virtual_Delta_Y,
-                                        Virtual_Delta_X
-                                )
-                        ) + 180
-                );
-
-        Turret_KF2 =
-                Math.max(
-                        -15,
-                        Math.min(
-                                15,
-                                Turret_KF * Robot_Heading_Velocity
-                        )
-                );
-
-        Target_Heading = Target - Turret_KF2;
-
-        double rawTurretAngle =
-                ((Target_Heading - Robot_Yaw) % 360 + 360) % 360;
-
-        Turret_In_Range =
-                rawTurretAngle <= Servo_Max_Range;
-
-        if (Turret_In_Range) {
-            Normalized_Target_Heading =
-                    rawTurretAngle + headingOffset;
-        } else {
-            double deadZoneMid =
-                    (Servo_Max_Range + 360) / 2;
-
-            Normalized_Target_Heading =
-                    rawTurretAngle >= deadZoneMid
-                            ? 0
-                            : Servo_Max_Range;
-        }
-
-        Target_Ticks =
-                clamp(
-                        Normalized_Target_Heading / Servo_Max_Range,
-                        0.0,
-                        1.0
-                );
+        targetTicks = clamp(normalizedHeading / SERVO_MAX_RANGE, 0.0, 1.0);
     }
 
-    private void Actuate() {
-        // Handle Drive Inputs (Field-Centric if position is set, Robot-Centric otherwise)
-        double inputX = X;
-        double inputY = Y;
+    private void actuate() {
+        // Drivetrain (Robot-Centric default; Field-Centric if toggled ON and pose set manually)
+        double driveX = stickX;
+        double driveY = stickY;
 
-        if (hasGoodPose) {
-            double botHeading = Math.toRadians(Robot_Yaw);
-            double rotX = inputX * Math.cos(-botHeading) - inputY * Math.sin(-botHeading);
-            double rotY = inputX * Math.sin(-botHeading) + inputY * Math.cos(-botHeading);
-            inputX = rotX;
-            inputY = rotY;
+        if (fieldCentricOn && poseSetManually && hasGoodPose) {
+            double fieldFwd = -stickY;
+            double fieldLeft = -stickX;
+            double rad = Math.toRadians(robotYaw - DRIVER_HEADING_OFFSET);
+            double cos = Math.cos(-rad);
+            double sin = Math.sin(-rad);
+
+            driveY = -(fieldFwd * cos - fieldLeft * sin);
+            driveX = -(fieldFwd * sin + fieldLeft * cos);
         }
 
-        // Omni-Wheel drive normalization
-        double fl = (inputY - inputX) - RX;
-        double bl = (inputY + inputX) - RX;
-        double fr = (inputY + inputX) + RX;
-        double br = (inputY - inputX) + RX;
+        double fl = (driveY - driveX) - stickRX;
+        double bl = (driveY + driveX) - stickRX;
+        double fr = (driveY + driveX) + stickRX;
+        double br = (driveY - driveX) + stickRX;
+        double max = Math.max(1.0, Math.max(Math.max(Math.abs(fl), Math.abs(bl)), Math.max(Math.abs(fr), Math.abs(br))));
 
-        double max =
-                Math.max(
-                        1.0,
-                        Math.max(
-                                Math.max(Math.abs(fl), Math.abs(bl)),
-                                Math.max(Math.abs(fr), Math.abs(br))
-                        )
-                );
+        setDrive(FL, 0, fl / max);
+        setDrive(BL, 1, bl / max);
+        setDrive(FR, 2, fr / max);
+        setDrive(BR, 3, br / max);
 
-        SetDrive(FL, 0, fl / max);
-        SetDrive(BL, 1, bl / max);
-        SetDrive(FR, 2, fr / max);
-        SetDrive(BR, 3, br / max);
-
-        // Intake + Transfer
+        // Intake & Transfer
         if (gamepad1.right_trigger > 0.1) {
-            SetTransferVelocity(2800);
-            SetIntakeVelocity(2400);
+            setTransfer(TRANSFER_FEED_VEL, true);
+            setIntakeVelocity(INTAKE_VEL);
         } else if (gamepad1.right_bumper) {
-            SetTransferVelocity(-350);
-            SetIntakeVelocity(-2400);
+            setTransfer(TRANSFER_IDLE_POWER, false);
+            setIntakeVelocity(-INTAKE_VEL);
         } else {
-            SetTransferVelocity(-350);
-            SetIntakeVelocity(gamepad1.left_trigger * 2400);
+            setTransfer(TRANSFER_IDLE_POWER, false);
+            setIntakeVelocity(gamepad1.left_trigger * INTAKE_VEL);
         }
 
-        // Turret
-        SetServo(
-                Turret,
-                true,
-                Turret_Switch ? Target_Ticks : 0.5
-        );
+        // Turret, Shooter & Flower
+        setServo(Turret, true, turretOn ? targetTicks : 0.5);
+        setServo(FlowerMechanism, false, flowerOn ? 0.425 : 0.0);
 
-        // Shooter
-        if (Shooter_Switch) {
-            double finalShooterVelocity =
-                    clampShooterVelocity(
-                            targetVelocity
-                                    + velocityCorrection
-                                    + VelocityOffset
-                    );
-
-            SetShooterVelocity(finalShooterVelocity);
+        if (shooterOn) {
+            setShooterVelocity(targetVel + velCorrection + velocityOffset);
         } else {
-            SetShooterOff();
+            setShooterOff();
         }
 
-        // Flower
-        SetServo(
-                FlowerMechanism,
-                false,
-                Flower_Switch ? 0.425 : 0
-        );
-
-        boolean turretOutOfRange =
-                Turret_Switch && !Turret_In_Range;
-
-        if (turretOutOfRange && !wasTurretOutOfRange) {
-            gamepad1.rumble(150);
-        }
-
-        wasTurretOutOfRange = turretOutOfRange;
+        // Rumble if turret hits travel limit
+        boolean outOfRange = turretOn && !turretInRange;
+        if (outOfRange && !wasTurretOutOfRange) gamepad1.rumble(150);
+        wasTurretOutOfRange = outOfRange;
     }
 
-    private boolean NeedsWrite(
-            double newV,
-            double lastV,
-            double eps
-    ) {
-        if (forceWrite || Double.isNaN(lastV)) {
-            return true;
+    // =========================================================================
+    // 6. HARDWARE CACHING & DIAGNOSTICS HELPERS
+    // =========================================================================
+
+    private void updateDiagnostics() {
+        loopMs = loopTimer.milliseconds();
+        loopTimer.reset();
+
+        if (firstLoop) {
+            firstLoop = false;
+        } else {
+            maxLoopMs = Math.max(maxLoopMs, loopMs);
+            if (loopMs > 50) stallCount++;
         }
 
-        if (newV == 0) {
-            return lastV != 0;
+        if (gamepad2.backWasPressed()) {
+            maxLoopMs = 0;
+            stallCount = 0;
+            rejectedFrames = 0;
+            consecutiveRejects = 0;
         }
 
-        return Math.abs(newV - lastV) > eps;
+        forceWrite = refreshTimer.milliseconds() >= 200;
+        if (forceWrite) refreshTimer.reset();
     }
 
-    private void SetDrive(
-            DcMotor motor,
-            int idx,
-            double power
-    ) {
+    private void updateTelemetry() {
+        double cmdShooterVel = clamp(targetVel + velCorrection + velocityOffset, MIN_SHOOTER_VEL, MAX_SHOOTER_VEL);
+        telemetry.addData("Field Centric", "%s (Active: %s)", fieldCentricOn, fieldCentricOn && poseSetManually && hasGoodPose);
+        telemetry.addData("Pose (X, Y, Yaw)", "%.1f, %.1f, %.1f°", robotX, robotY, robotYaw);
+        telemetry.addData("Goal (X, Y) | Dist", "%.1f, %.1f | %.1f in", goalX, goalY, distance);
+        telemetry.addData("Shooter Vel (Act / Cmd)", "%.0f / %.0f", ((DcMotorEx) Shooter).getVelocity(), cmdShooterVel);
+        telemetry.addData("Trims (Vel / Head)", "%d / %d", velocityOffset, headingOffset);
+        telemetry.addData("Pinpoint", "%s (OK: %s, Rejects: %d)", pinpointStatus, pinpointOK, rejectedFrames);
+        telemetry.addData("Loop ms (Cur / Max)", "%.1f / %.1f (Stalls: %d)", loopMs, maxLoopMs, stallCount);
+        telemetry.update();
+    }
+
+    private boolean needsWrite(double newVal, double lastVal, double eps) {
+        if (forceWrite || Double.isNaN(lastVal)) return true;
+        if (newVal == 0) return lastVal != 0;
+        return Math.abs(newVal - lastVal) > eps;
+    }
+
+    private void setDrive(DcMotor motor, int idx, double power) {
         power = clamp(power, -1.0, 1.0);
-
-        if (NeedsWrite(power, lastDrive[idx], 0.01)) {
+        if (needsWrite(power, lastDrive[idx], 0.01)) {
             motor.setPower(power);
             lastDrive[idx] = power;
         }
     }
 
-    private void SetIntakeVelocity(double v) {
-        if (NeedsWrite(v, lastIntakeVel, 5)) {
-            ((DcMotorEx) Intake).setVelocity(v);
-            lastIntakeVel = v;
+    private void setIntakeVelocity(double vel) {
+        if (needsWrite(vel, lastIntakeVel, 5)) {
+            ((DcMotorEx) Intake).setVelocity(vel);
+            lastIntakeVel = vel;
         }
     }
 
-    private void SetShooterVelocity(double v) {
-        v = clampShooterVelocity(v);
+    private void setTransfer(double val, boolean useVelocity) {
+        DcMotor.RunMode targetMode = useVelocity ? DcMotor.RunMode.RUN_USING_ENCODER : DcMotor.RunMode.RUN_WITHOUT_ENCODER;
+        double eps = useVelocity ? 5.0 : 0.001;
 
-        if (NeedsWrite(v, lastShooterVel, 2)) {
-            ((DcMotorEx) Shooter).setVelocity(v);
-            lastShooterVel = v;
+        if (lastTransferWasVel != useVelocity || needsWrite(val, lastTransferCmd, eps)) {
+            if (Transfer.getMode() != targetMode) Transfer.setMode(targetMode);
+            if (useVelocity) {
+                ((DcMotorEx) Transfer).setVelocity(val);
+            } else {
+                Transfer.setPower(clamp(val, -1.0, 1.0));
+            }
+            lastTransferCmd = val;
+            lastTransferWasVel = useVelocity;
+        }
+    }
+
+    private void setShooterVelocity(double vel) {
+        vel = clamp(vel, MIN_SHOOTER_VEL, MAX_SHOOTER_VEL);
+        if (needsWrite(vel, lastShooterVel, 2)) {
+            ((DcMotorEx) Shooter).setVelocity(vel);
+            lastShooterVel = vel;
             lastShooterPower = Double.NaN;
         }
     }
 
-    private void SetShooterOff() {
-        if (NeedsWrite(0, lastShooterPower, 0.001)) {
+    private void setShooterOff() {
+        if (needsWrite(0, lastShooterPower, 0.001)) {
             Shooter.setPower(0);
             lastShooterPower = 0;
             lastShooterVel = Double.NaN;
         }
     }
 
-    private void SetServo(
-            Servo servo,
-            boolean isTurret,
-            double pos
-    ) {
+    private void setServo(Servo servo, boolean isTurret, double pos) {
         pos = clamp(pos, 0.0, 1.0);
-
-        double last =
-                isTurret
-                        ? lastTurretPos
-                        : lastFlowerPos;
-
-        if (NeedsWrite(pos, last, 0.001)) {
+        double last = isTurret ? lastTurretPos : lastFlowerPos;
+        if (needsWrite(pos, last, 0.001)) {
             servo.setPosition(pos);
-
-            if (isTurret) {
-                lastTurretPos = pos;
-            } else {
-                lastFlowerPos = pos;
-            }
+            if (isTurret) lastTurretPos = pos;
+            else lastFlowerPos = pos;
         }
     }
 
-    private void SetTransferVelocity(double v) {
-        if (NeedsWrite(v, lastTransferVel, 5)) {
-            ((DcMotorEx) Transfer).setVelocity(v);
-            lastTransferVel = v;
-        }
+    private double deadband(double val) {
+        return Math.abs(val) < STICK_DEADBAND ? 0 : val;
     }
 
-    private double clamp(
-            double value,
-            double min,
-            double max
-    ) {
-        return Math.max(min, Math.min(max, value));
-    }
-
-    private double clampShooterVelocity(double value) {
-        return clamp(
-                value,
-                Min_Shooter_Velocity,
-                Max_Shooter_Velocity
-        );
+    private double clamp(double val, double min, double max) {
+        return Math.max(min, Math.min(max, val));
     }
 }
