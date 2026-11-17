@@ -49,7 +49,7 @@ public class MainTeleOp extends LinearOpMode {
     static final double SERVO_MAX_RANGE = 355.0;
     static final double TURRET_KF = 0.275;
     static final double POS_SIDE_HEADING_TRIM = -3.0; // Applied when robotX > 0
-    static final double VEL_SMOOTHING = 0.5;          // Smooths turret & shooter jitter (0.1 = heavy, 1.0 = raw)
+    static final double VEL_SMOOTHING = 0.5;          // Smooths turret & shooter jitter
 
     // Intake & Transfer
     static final double INTAKE_VEL = 2400.0;
@@ -75,7 +75,7 @@ public class MainTeleOp extends LinearOpMode {
     private double distance = 0, targetVel = 0, velCorrection = 0, targetTicks = 0.5;
     private int headingOffset = 0, velocityOffset = 0;
 
-    // Lightweight hardware write cache to prevent USB/RS485 bus spam
+    // Hardware write cache (prevents bus spam & servo hunting current)
     private final double[] lastDrive = {Double.NaN, Double.NaN, Double.NaN, Double.NaN};
     private double lastIntakeVel = Double.NaN, lastShooterVel = Double.NaN, lastTurretPos = Double.NaN;
     private Boolean wasFeeding = null;
@@ -112,7 +112,7 @@ public class MainTeleOp extends LinearOpMode {
             computeAiming();
             actuate();
 
-            if (telemetryTimer.milliseconds() >= 200) {
+            if (telemetryTimer.milliseconds() >= 250) {
                 updateTelemetry();
                 telemetryTimer.reset();
             }
@@ -145,7 +145,7 @@ public class MainTeleOp extends LinearOpMode {
         resetTimer.reset();
         resetPending = true;
 
-        // Motors
+        // Motors (FLOAT mode saves battery by coasting instead of braking with current)
         setupMotor(Shooter, DcMotor.Direction.REVERSE, 50, 14);
         setupMotor(Intake, DcMotor.Direction.REVERSE, 30, 16);
         setupMotor(Transfer, DcMotor.Direction.FORWARD, 30, 14);
@@ -163,6 +163,7 @@ public class MainTeleOp extends LinearOpMode {
         // Servos
         Turret.setPwmRange(new PwmControl.PwmRange(500, 2500));
         Turret.setDirection(Servo.Direction.REVERSE);
+        Turret.setPosition(0.5);
         FlowerMechanism.setDirection(Servo.Direction.FORWARD);
         FlowerMechanism.setPosition(0.0);
     }
@@ -206,7 +207,6 @@ public class MainTeleOp extends LinearOpMode {
                 robotX = px;
                 robotY = py;
                 robotYaw = yaw;
-                // Smooth velocity readings so turret and shooter don't jitter
                 if (Double.isFinite(vx) && Double.isFinite(vy)) {
                     velX += VEL_SMOOTHING * (vx - velX);
                     velY += VEL_SMOOTHING * (vy - velY);
@@ -219,26 +219,19 @@ public class MainTeleOp extends LinearOpMode {
     }
 
     private void updateTogglesAndGoal() {
-        double baseGoalX = (robotX > 3.0) ? BASE_GOAL_X_POS
-                : (robotX < -3.0) ? BASE_GOAL_X_NEG
-                : (goalX >= 0 ? BASE_GOAL_X_POS : BASE_GOAL_X_NEG);
-
-        double yOffset = robotY - BASE_GOAL_Y;
-        double maxWallDist = (yOffset >= 0) ? (FIELD_HALF_WIDTH - BASE_GOAL_Y) : (FIELD_HALF_WIDTH + BASE_GOAL_Y);
-        double sideRatio = clamp(yOffset / maxWallDist, -1.0, 1.0);
-        double sideShift = sideRatio * MAX_SIDE_SHIFT;
-        double depthShift = Math.abs(sideRatio) * MAX_X_SIDE_SHIFT;
-
-        goalY = (baseGoalX < 0) ? (BASE_GOAL_Y - sideShift) : (BASE_GOAL_Y + sideShift);
-        goalX = (baseGoalX < 0) ? (baseGoalX + depthShift) : (baseGoalX - depthShift);
-
-        // Driver 1 Toggles (write immediately on toggle to save loop time)
-        if (gamepad1.aWasPressed()) turretOn = !turretOn;
+        // Driver 1 Toggles (write immediately on state change)
+        if (gamepad1.aWasPressed()) {
+            turretOn = !turretOn;
+            if (!turretOn) {
+                Turret.setPosition(0.5);
+                lastTurretPos = 0.5;
+            }
+        }
 
         if (gamepad1.bWasPressed()) {
             shooterOn = !shooterOn;
             if (!shooterOn) {
-                Shooter.setPower(0);
+                Shooter.setPower(0); // Coasts down with zero current draw
                 lastShooterVel = Double.NaN;
             }
         }
@@ -256,47 +249,70 @@ public class MainTeleOp extends LinearOpMode {
     }
 
     private void computeAiming() {
+        // Skip all trig and aiming math when both turret and shooter are off
+        if (!turretOn && !shooterOn) return;
+
         if (!pinpointOK) {
             targetTicks = 0.5;
             velCorrection = 0;
             return;
         }
 
+        // Update dynamic Goal X & Y only when aiming is active
+        double baseGoalX = (robotX > 3.0) ? BASE_GOAL_X_POS
+                : (robotX < -3.0) ? BASE_GOAL_X_NEG
+                : (goalX >= 0 ? BASE_GOAL_X_POS : BASE_GOAL_X_NEG);
+
+        double yOffset = robotY - BASE_GOAL_Y;
+        double maxWallDist = (yOffset >= 0) ? (FIELD_HALF_WIDTH - BASE_GOAL_Y) : (FIELD_HALF_WIDTH + BASE_GOAL_Y);
+        double sideRatio = clamp(yOffset / maxWallDist, -1.0, 1.0);
+        double sideShift = sideRatio * MAX_SIDE_SHIFT;
+        double depthShift = Math.abs(sideRatio) * MAX_X_SIDE_SHIFT;
+
+        goalY = (baseGoalX < 0) ? (BASE_GOAL_Y - sideShift) : (BASE_GOAL_Y + sideShift);
+        goalX = (baseGoalX < 0) ? (baseGoalX + depthShift) : (baseGoalX - depthShift);
+
         double yawRad = Math.toRadians(robotYaw);
         double turretX = robotX + TURRET_OFFSET_FORWARD * Math.cos(yawRad);
         double turretY = robotY + TURRET_OFFSET_FORWARD * Math.sin(yawRad);
 
-        // Static & shoot-on-the-move distances
-        distance = Math.hypot(goalX - turretX, goalY - turretY);
-        double vDeltaX = (goalX - velX * SHOT_TIME) - turretX;
-        double vDeltaY = (goalY - velY * SHOT_TIME) - turretY;
-        double virtualDist = Math.hypot(vDeltaX, vDeltaY);
+        // Fast Euclidean distances (avoids slow Math.hypot software checks)
+        double dx = goalX - turretX;
+        double dy = goalY - turretY;
+        distance = Math.sqrt(dx * dx + dy * dy);
+
+        double vDeltaX = dx - velX * SHOT_TIME;
+        double vDeltaY = dy - velY * SHOT_TIME;
+        double virtualDist = Math.sqrt(vDeltaX * vDeltaX + vDeltaY * vDeltaY);
 
         // Shooter Velocity
-        double sideVelTrim = (robotX > 0) ? POS_SIDE_VEL_TRIM : 0;
-        targetVel = (SHOOTER_SLOPE * distance) + SHOOTER_BASE_VEL + sideVelTrim;
-        velCorrection = clamp((virtualDist - distance) / SHOT_TIME, -MAX_VEL_CORRECTION, MAX_VEL_CORRECTION);
+        if (shooterOn) {
+            double sideVelTrim = (robotX > 0) ? POS_SIDE_VEL_TRIM : 0;
+            targetVel = (SHOOTER_SLOPE * distance) + SHOOTER_BASE_VEL + sideVelTrim;
+            velCorrection = clamp((virtualDist - distance) / SHOT_TIME, -MAX_VEL_CORRECTION, MAX_VEL_CORRECTION);
+        }
 
         // Turret Angle
-        double targetAngle = AngleUnit.DEGREES.normalize(Math.toDegrees(Math.atan2(vDeltaY, vDeltaX)) + 180);
-        double leadAngle = clamp(TURRET_KF * headingVel, -15, 15);
-        double rawTurret = (((targetAngle - leadAngle) - robotYaw) % 360 + 360) % 360;
+        if (turretOn) {
+            double targetAngle = AngleUnit.DEGREES.normalize(Math.toDegrees(Math.atan2(vDeltaY, vDeltaX)) + 180);
+            double leadAngle = clamp(TURRET_KF * headingVel, -15, 15);
+            double rawTurret = (((targetAngle - leadAngle) - robotYaw) % 360 + 360) % 360;
 
-        boolean inRange = rawTurret <= SERVO_MAX_RANGE;
-        double sideHeadTrim = (robotX > 0) ? POS_SIDE_HEADING_TRIM : 0;
-        double normalized = inRange
-                ? (rawTurret + headingOffset + sideHeadTrim)
-                : (rawTurret >= (SERVO_MAX_RANGE + 360) / 2.0 ? 0 : SERVO_MAX_RANGE);
+            boolean inRange = rawTurret <= SERVO_MAX_RANGE;
+            double sideHeadTrim = (robotX > 0) ? POS_SIDE_HEADING_TRIM : 0;
+            double normalized = inRange
+                    ? (rawTurret + headingOffset + sideHeadTrim)
+                    : (rawTurret >= (SERVO_MAX_RANGE + 360) / 2.0 ? 0 : SERVO_MAX_RANGE);
 
-        targetTicks = clamp(normalized / SERVO_MAX_RANGE, 0.0, 1.0);
+            targetTicks = clamp(normalized / SERVO_MAX_RANGE, 0.0, 1.0);
 
-        boolean outOfRange = turretOn && !inRange;
-        if (outOfRange && !wasOutOfRange) gamepad1.rumble(150);
-        wasOutOfRange = outOfRange;
+            if (!inRange && !wasOutOfRange) gamepad1.rumble(150);
+            wasOutOfRange = !inRange;
+        }
     }
 
     private void actuate() {
-        // 1. Robot-Centric Omni Drive (only writes when stick changes)
+        // 1. Robot-Centric Omni Drive
         double y = deadband(gamepad1.left_stick_y);
         double x = deadband(gamepad1.left_stick_x);
         double rx = deadband(gamepad1.right_stick_x);
@@ -312,7 +328,7 @@ public class MainTeleOp extends LinearOpMode {
         setDrivePower(FR, 2, fr / max);
         setDrivePower(BR, 3, br / max);
 
-        // 2. Transfer (only switches mode/command when trigger state changes)
+        // 2. Transfer (only sends mode/command when trigger state changes)
         boolean isFeeding = gamepad1.right_trigger > 0.1;
         if (wasFeeding == null || isFeeding != wasFeeding) {
             if (isFeeding) {
@@ -325,25 +341,28 @@ public class MainTeleOp extends LinearOpMode {
             wasFeeding = isFeeding;
         }
 
-        // 3. Intake
+        // 3. Intake (cuts power completely at 0 so PID doesn't burn battery holding position)
         double intakeCmd = isFeeding ? INTAKE_VEL
                 : gamepad1.right_bumper ? -INTAKE_VEL
-                : gamepad1.left_trigger * INTAKE_VEL;
-        if (hasChanged(intakeCmd, lastIntakeVel, 5.0)) {
-            Intake.setVelocity(intakeCmd);
+                : deadband(gamepad1.left_trigger) * INTAKE_VEL;
+        if (hasChanged(intakeCmd, lastIntakeVel, 15.0)) {
+            if (intakeCmd == 0) {
+                Intake.setPower(0);
+            } else {
+                Intake.setVelocity(intakeCmd);
+            }
             lastIntakeVel = intakeCmd;
         }
 
-        // 4. Turret & Shooter
-        double turretCmd = turretOn ? targetTicks : 0.5;
-        if (hasChanged(turretCmd, lastTurretPos, 0.001)) {
-            Turret.setPosition(turretCmd);
-            lastTurretPos = turretCmd;
+        // 4. Turret & Shooter (deadbands prevent servo hunting & PID current spikes)
+        if (turretOn && hasChanged(targetTicks, lastTurretPos, 0.002)) {
+            Turret.setPosition(targetTicks);
+            lastTurretPos = targetTicks;
         }
 
         if (shooterOn) {
             double cmdVel = clamp(targetVel + velCorrection + velocityOffset, 0, MAX_SHOOTER_VEL);
-            if (hasChanged(cmdVel, lastShooterVel, 2.0)) {
+            if (hasChanged(cmdVel, lastShooterVel, 8.0)) {
                 Shooter.setVelocity(cmdVel);
                 lastShooterVel = cmdVel;
             }
@@ -351,7 +370,7 @@ public class MainTeleOp extends LinearOpMode {
     }
 
     private void setDrivePower(DcMotor motor, int idx, double power) {
-        if (hasChanged(power, lastDrive[idx], 0.005)) {
+        if (hasChanged(power, lastDrive[idx], 0.01)) {
             motor.setPower(power);
             lastDrive[idx] = power;
         }
@@ -364,11 +383,13 @@ public class MainTeleOp extends LinearOpMode {
     }
 
     private void updateTelemetry() {
-        double cmdVel = clamp(targetVel + velCorrection + velocityOffset, 0, MAX_SHOOTER_VEL);
+        double cmdVel = shooterOn ? clamp(targetVel + velCorrection + velocityOffset, 0, MAX_SHOOTER_VEL) : 0;
+        double actVel = shooterOn ? Shooter.getVelocity() : 0; // Avoids Hub read when shooter is off
+
         telemetry.addData("Loop Time", "%.1f ms (%.0f Hz)", loopMs, 1000.0 / Math.max(0.1, loopMs));
         telemetry.addData("Pose (X, Y, Yaw)", "%.1f, %.1f, %.1f°", robotX, robotY, robotYaw);
         telemetry.addData("Goal (X, Y) | Dist", "%.1f, %.1f | %.1f in", goalX, goalY, distance);
-        telemetry.addData("Shooter Vel (Act / Cmd)", "%.0f / %.0f", Shooter.getVelocity(), cmdVel);
+        telemetry.addData("Shooter Vel (Act / Cmd)", "%.0f / %.0f", actVel, cmdVel);
         telemetry.addData("Trims (Vel / Head)", "%d / %d", velocityOffset, headingOffset);
         telemetry.addData("Pinpoint OK", pinpointOK);
         telemetry.update();
