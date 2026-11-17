@@ -1,30 +1,30 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Auto;
 
-import com.pedropathing.api.Paths;
-
-import com.pedropathing.api.PoseFactory;
-import com.pedropathing.follower.Follower;
-import com.pedropathing.math.Pose;
-import com.pedropathing.paths.Path;
-import com.pedropathing.ivy.Command;
-import com.pedropathing.ivy.Scheduler;
 import static com.pedropathing.ivy.Scheduler.schedule;
+import static com.pedropathing.ivy.commands.Commands.instant;
+import static com.pedropathing.ivy.commands.Commands.waitMs;
 import static com.pedropathing.ivy.groups.Groups.parallel;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
+
+import com.pedropathing.api.Paths;
+import com.pedropathing.api.PoseFactory;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.Scheduler;
+import com.pedropathing.math.Pose;
+import com.pedropathing.paths.Path;
+import com.pedropathing.paths.interpolator.Interpolator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
-import static com.pedropathing.ivy.commands.Commands.*;   // instant, waitMs, waitUntil, infinite
-
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
-
-@Autonomous(name = "OneTipUp", group = "Goal Up")
-public class OneTipUp extends LinearOpMode {
+@Autonomous(name = "GoalDownPartner", group = "Goal Down")
+public class GoalDownPartner extends LinearOpMode {
 
     final int shooterVelocity = 1440;
     final int intakeVelocity = 2400;
@@ -35,13 +35,27 @@ public class OneTipUp extends LinearOpMode {
     private DcMotor Transfer;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
-    private final Pose start = poseFactory.of(54.9267, 8.1789, 90);
-    private final Pose scoreToFlower1 = poseFactory.of(12.909, 90.5752, 90);
-    private final Pose scoreToFlower1Control1 = poseFactory.of(22.8636, 35.9542, 0);
-    public Path park() {
-        return Paths.curve(start, scoreToFlower1Control1, scoreToFlower1).linear(start, scoreToFlower1);
+    private final Pose start = poseFactory.of(62.6188, 134.2946, 90);
+    private final Pose wait = poseFactory.of(60, 72, 90);
+    private final Pose returnPose = poseFactory.of(56, 116, 180);
+    private final Pose returnPoseSegment1Heading = poseFactory.of(56, 116, 270);
+    private final Pose returnPoseSegment2Start = poseFactory.of(56, 116, 270);
+    private final Pose returnPoseSegment2End = poseFactory.of(56, 116, 180);
+    private final Pose park = poseFactory.of(12, 122, 180);
+
+    public Path waiting() {
+        return Paths.line(start, wait).constant(wait);
     }
-    private Command stopShooting() {
+
+    public Path returnPose() {
+        return Paths.line(wait, returnPose).heading(Interpolator.piecewise().until(0.75, Interpolator.constant(returnPoseSegment1Heading)).until(1, Interpolator.linear(returnPoseSegment2Start, returnPoseSegment2End)));
+    }
+
+    public Path park() {
+        return Paths.line(returnPose, park).constant(park);
+    }
+
+        private Command stopShooting() {
         return parallel(
                 instant(() -> Intake.setPower(0)),
                 instant(() -> Transfer.setPower(0)),
@@ -72,13 +86,19 @@ public class OneTipUp extends LinearOpMode {
     public Command autoRoutine() {
         return sequential(
                 // Shoot Pre-Load //
+                waitMs(10000),
                 shooterOn(),
-                waitMs(1000),
+                waitMs(1500),
                 startShooting(),
                 waitMs(1500),
                 stopShooting(),
                 // Shoot Pre-Load //
-                
+
+                follow(follower, waiting()),
+                waitMs(7500),
+
+                follow(follower, returnPose()),
+
                 follow(follower, park())
         );
     }
