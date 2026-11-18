@@ -8,7 +8,7 @@ public class TurretShooter {
     public static final double SHOOTER_A = -0.00595183;
     public static final double SHOOTER_B = 1.01756;
     public static final double SHOOTER_C = -50.807;
-    public static final double SHOOTER_D = 2270.21;
+    public static final double SHOOTER_D = 2230.21;
     public static final double POS_SIDE_VEL_TRIM = -40;
     public static final double MAX_SHOOTER_VEL = 1700.0;
     public static final double SHOT_TIME = 0.65;
@@ -17,7 +17,7 @@ public class TurretShooter {
     // Goal & Turret Geometry
     public static final double BASE_GOAL_X_NEG = -10.0;
     public static final double BASE_GOAL_X_POS = 10.0;
-    public static final double BASE_GOAL_Y = 18.0;
+    public static final double BASE_GOAL_Y = 15.0;
     public static final double MAX_SIDE_SHIFT = 6.0;
     public static final double MAX_X_SIDE_SHIFT = 4.0;
     public static final double FIELD_HALF_WIDTH = 72.0;
