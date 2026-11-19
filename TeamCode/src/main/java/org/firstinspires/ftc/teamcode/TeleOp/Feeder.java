@@ -25,10 +25,13 @@ public class Feeder {
         flowerOn = !flowerOn;
     }
 
-    public void update(double rightTrigger, double leftTrigger, boolean rightBumper) {
-        // Trigger hysteresis prevents mode-switch chatter near 0.1
-        if (!isFeeding && rightTrigger > 0.15) isFeeding = true;
-        else if (isFeeding && rightTrigger < 0.05) isFeeding = false;
+    public void update(double rightTrigger, double leftTrigger, boolean rightBumper, boolean turretInRange) {
+        // Trigger hysteresis with safety check: prevents feeding if turret is out of range or wrapping
+        if (!isFeeding && rightTrigger > 0.15 && turretInRange) {
+            isFeeding = true;
+        } else if (isFeeding && (rightTrigger < 0.05 || !turretInRange)) {
+            isFeeding = false;
+        }
 
         // Transfer (slot 4)
         if (isFeeding) {

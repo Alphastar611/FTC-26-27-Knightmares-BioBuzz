@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Auto;
 import static com.pedropathing.ivy.Scheduler.schedule;
 import static com.pedropathing.ivy.commands.Commands.instant;
 import static com.pedropathing.ivy.commands.Commands.waitMs;
+import static com.pedropathing.ivy.commands.Commands.waitUntil;
 import static com.pedropathing.ivy.groups.Groups.parallel;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
@@ -29,7 +30,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class TwoTipUpGarden extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
-    int shooterVelocity = 1560;
+    int shooterVelocity = 1520;
     final int intakeVelocity = 2000;
     final int transferVelocity = 2800;
     final double flowerUp = 0;
@@ -42,8 +43,8 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(53.8534, 8.3578, 90);
-    private final Pose shootPreload = poseFactory.of(54, 12, 90);
-    private final Pose gardenBufferStart = poseFactory.of(54, 12, 90);
+    private final Pose shootPreload = poseFactory.of(54, 10, 90);
+    private final Pose gardenBufferStart = poseFactory.of(54, 10, 90);
     private final Pose gardenBuffer = poseFactory.of(16, 20, 270);
     private final Pose gardenCollect = poseFactory.of(6, 6, 270);
     private final Pose score2 = poseFactory.of(34, 130, -55);
@@ -195,7 +196,7 @@ public class TwoTipUpGarden extends LinearOpMode {
                 // Shoot Pre-Load //
                 shooterOn(),
                 follow(follower, shootPreload()),
-                waitMs(750),
+                waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
                 startShooting(),
                 waitMs(1250),
                 stopShooting(),
@@ -209,13 +210,13 @@ public class TwoTipUpGarden extends LinearOpMode {
                 // Grab from garden //
                 followWithTimeout(gardenCollect(), 1),
                 waitMs(250),
-                instant(() -> shooterVelocity = 1520),
+                instant(() -> shooterVelocity = 1540),
                 shooterOn(),
                 // Grab from garden //
 
                 // Shoot for the second time //
                 follow(follower, score2()),
-                waitMs(250),
+                waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
                 startShooting(),
                 waitMs(1000),
                 stopShooting(),
@@ -240,7 +241,7 @@ public class TwoTipUpGarden extends LinearOpMode {
                 // Score for the third time //
                 follow(follower, score3()),
                 flowerUp(),
-                waitMs(250),
+                waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
                 startShooting(),
                 waitMs(1000),
                 stopShooting(),
@@ -264,7 +265,7 @@ public class TwoTipUpGarden extends LinearOpMode {
 
                 // Score for the fourth time //
                 follow(follower, shoot4()),
-                waitMs(250),
+                waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
                 flowerUp(),
                 startShooting(),
                 waitMs(1000),

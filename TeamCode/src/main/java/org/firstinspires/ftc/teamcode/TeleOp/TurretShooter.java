@@ -31,6 +31,7 @@ public class TurretShooter {
 
     public boolean turretOn = false;
     public boolean shooterOn = false;
+    public boolean turretInRange = true; // Exposes whether turret is safely aligned
     public int headingOffset = 0;
     public int velocityOffset = 0;
 
@@ -70,6 +71,7 @@ public class TurretShooter {
         if (!loc.pinpointOK) {
             targetTicks = 0.5;
             velCorrection = 0;
+            turretInRange = true;
         } else {
             // 1. Dynamic Goal X & Y
             double baseGoalX = (loc.x > 3.0) ? BASE_GOAL_X_POS
@@ -98,7 +100,7 @@ public class TurretShooter {
             double vDeltaY = dy - loc.velY * SHOT_TIME;
             double virtualDist = Math.sqrt(vDeltaX * vDeltaX + vDeltaY * vDeltaY);
 
-            // 3. Shooter Velocity (Corner's method)
+            // 3. Shooter Velocity
             double sideVelTrim = (loc.x > 0) ? POS_SIDE_VEL_TRIM : 0;
             double baseCurveVel = ((SHOOTER_A * distance + SHOOTER_B) * distance + SHOOTER_C) * distance + SHOOTER_D;
             targetVel = baseCurveVel + sideVelTrim;
@@ -110,6 +112,8 @@ public class TurretShooter {
             double rawTurret = (((targetAngle - leadAngle) - loc.yaw) % 360 + 360) % 360;
 
             boolean inRange = rawTurret <= SERVO_MAX_RANGE;
+            turretInRange = inRange; // Store alignment state
+
             double sideHeadTrim = (loc.x > 0) ? POS_SIDE_HEADING_TRIM : 0;
             double normalized = inRange
                     ? (rawTurret + headingOffset + sideHeadTrim)
@@ -122,7 +126,7 @@ public class TurretShooter {
             wasOutOfRange = outOfRange;
         }
 
-        // 5. Actuate Turret (slot 6) & Shooter (slot 8)
+        // 5. Actuate Turret & Shooter
         double turretCmd = turretOn ? targetTicks : 0.52;
         if (hw.needsWrite(turretCmd, lastTurretPos, 0.002, 6)) {
             hw.Turret.setPosition(turretCmd);

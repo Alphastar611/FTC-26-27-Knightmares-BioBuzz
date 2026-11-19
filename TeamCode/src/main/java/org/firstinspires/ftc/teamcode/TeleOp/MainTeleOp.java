@@ -58,7 +58,7 @@ public class MainTeleOp extends LinearOpMode {
             // Update Subsystems
             localization.update();
             drivetrain.update(gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
-            feeder.update(gamepad1.right_trigger, gamepad1.left_trigger, gamepad1.right_bumper);
+            feeder.update(gamepad1.right_trigger, gamepad1.left_trigger, gamepad1.right_bumper,turretShooter.turretInRange);
 
             if (turretShooter.update(localization)) {
                 gamepad1.rumble(150);
