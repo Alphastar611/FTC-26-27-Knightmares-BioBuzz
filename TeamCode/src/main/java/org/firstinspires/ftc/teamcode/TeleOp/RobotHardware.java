@@ -72,7 +72,7 @@ public class RobotHardware {
         Turret.setPosition(0.5);
 
         FlowerMechanism.setDirection(Servo.Direction.FORWARD);
-        FlowerMechanism.setPosition(0.0);
+        FlowerMechanism.setPosition(0.05);
 
         refreshTimer.reset();
     }

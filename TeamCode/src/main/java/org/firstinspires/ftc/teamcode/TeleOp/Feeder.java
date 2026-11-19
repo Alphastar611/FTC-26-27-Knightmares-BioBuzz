@@ -65,7 +65,7 @@ public class Feeder {
         }
 
         // Flower servo (slot 7)
-        double flowerCmd = flowerOn ? 0.425 : 0.0;
+        double flowerCmd = flowerOn ? 0.31 : 0.025;
         if (Hardware.needsWrite(flowerCmd, lastFlowerPos, 0.001, 7)) {
             Hardware.FlowerMechanism.setPosition(flowerCmd);
             lastFlowerPos = flowerCmd;

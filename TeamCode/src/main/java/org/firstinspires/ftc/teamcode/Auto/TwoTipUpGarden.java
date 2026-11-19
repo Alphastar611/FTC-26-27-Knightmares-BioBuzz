@@ -31,10 +31,10 @@ public class TwoTipUpGarden extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
     int shooterVelocity = 1520;
-    final int intakeVelocity = 2000;
-    final int transferVelocity = 2800;
-    final double flowerUp = 0;
-    final double flowerDown = 0.425;
+    final int intakeVelocity = 1800;
+    final int transferVelocity = 2400;
+    final double flowerUp = 0.05;
+    final double flowerDown = 0.31;
     private Follower follower;
     private DcMotor Shooter;
     private DcMotor Intake;
@@ -43,35 +43,31 @@ public class TwoTipUpGarden extends LinearOpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(53.8534, 8.3578, 90);
-    private final Pose shootPreload = poseFactory.of(54, 10, 90);
-    private final Pose gardenBufferStart = poseFactory.of(54, 10, 90);
+    private final Pose shootPreload = poseFactory.of(34, 12, 65);
+    private final Pose gardenBufferStart = poseFactory.of(34, 12, 65);
     private final Pose gardenBuffer = poseFactory.of(16, 20, 270);
-    private final Pose gardenCollect = poseFactory.of(6, 6, 270);
+    private final Pose gardenCollect = poseFactory.of(0, 6, 270);
     private final Pose score2 = poseFactory.of(34, 130, -55);
     private final Pose score2Control1 = poseFactory.of(20.2246, 29.0205, 0);
     private final Pose score2Segment1Heading = poseFactory.of(34, 130, 270);
     private final Pose score2Segment2Start = poseFactory.of(34, 130, -90);
-    private final Pose score2Segment2End = poseFactory.of(34, 130, 305);
-    private final Pose flower1BufferStart = poseFactory.of(34, 130, 305);
+    private final Pose score2Segment2End = poseFactory.of(34, 130, 300);
+    private final Pose flower1BufferStart = poseFactory.of(34, 130, 300);
     private final Pose flower1Buffer = poseFactory.of(24, 50, 180);
     private final Pose flower1Collect = poseFactory.of(5, 50, 180);
-    private final Pose flower1Shuffle = poseFactory.of(24, 50, 180);
-    private final Pose flower1Collect2 = poseFactory.of(5, 50, 180);
     private final Pose score3 = poseFactory.of(34, 130, -55);
     private final Pose score3Control1 = poseFactory.of(38.093, 69.429, 0);
     private final Pose score3Segment1Start = poseFactory.of(34, 130, 180);
     private final Pose score3Segment1End = poseFactory.of(34, 130, 210);
     private final Pose score3Segment3Start = poseFactory.of(34, 130, -93.4927);
-    private final Pose score3Segment3End = poseFactory.of(34, 130, 305);
-    private final Pose flower2BufferStart = poseFactory.of(34, 130, 305);
+    private final Pose score3Segment3End = poseFactory.of(34, 130, 300);
+    private final Pose flower2BufferStart = poseFactory.of(34, 130, 300);
     private final Pose flower2Buffer = poseFactory.of(46.75, 120, 90);
     private final Pose flower2Collect = poseFactory.of(46.75, 134, 90);
-    private final Pose flower2Shuffle = poseFactory.of(46.75, 120, 90);
-    private final Pose flower2Collect2 = poseFactory.of(46.75, 134, 90);
     private final Pose shoot4Start = poseFactory.of(46.75, 134, 90);
-    private final Pose shoot4 = poseFactory.of(34, 130, 305);
+    private final Pose shoot4 = poseFactory.of(34, 130, 300);
     private final Pose shoot4Control1 = poseFactory.of(39.4855, 117.5357, 0);
-    private final Pose parkStart = poseFactory.of(34, 130, 305);
+    private final Pose parkStart = poseFactory.of(34, 130, 300);
     private final Pose park = poseFactory.of(12, 120, 270);
 
     public Path shootPreload() {
@@ -98,16 +94,9 @@ public class TwoTipUpGarden extends LinearOpMode {
         return Paths.line(flower1Buffer, flower1Collect).constant(flower1Collect);
     }
 
-    public Path flower1Shuffle() {
-        return Paths.line(flower1Collect, flower1Shuffle).constant(flower1Shuffle);
-    }
-
-    public Path flower1Collect2() {
-        return Paths.line(flower1Shuffle, flower1Collect2).constant(flower1Collect2);
-    }
 
     public Path score3() {
-        return Paths.curve(flower1Collect2, score3Control1, score3).heading(Interpolator.piecewise().until(0.125, Interpolator.linear(score3Segment1Start, score3Segment1End)).until(0.75, Interpolator.tangent.reverse()).until(1, Interpolator.linear(score3Segment3Start, score3Segment3End)));
+        return Paths.curve(flower1Collect, score3Control1, score3).heading(Interpolator.piecewise().until(0.125, Interpolator.linear(score3Segment1Start, score3Segment1End)).until(0.75, Interpolator.tangent.reverse()).until(1, Interpolator.linear(score3Segment3Start, score3Segment3End)));
     }
 
     public Path flower2Buffer() {
@@ -116,14 +105,6 @@ public class TwoTipUpGarden extends LinearOpMode {
 
     public Path flower2Collect() {
         return Paths.line(flower2Buffer, flower2Collect).constant(flower2Collect);
-    }
-
-    public Path flower2Shuffle() {
-        return Paths.line(flower2Collect, flower2Shuffle).constant(flower2Shuffle);
-    }
-
-    public Path flower2Collect2() {
-        return Paths.line(flower2Shuffle, flower2Collect2).constant(flower2Collect2);
     }
 
     public Path shoot4() {
@@ -198,7 +179,7 @@ public class TwoTipUpGarden extends LinearOpMode {
                 follow(follower, shootPreload()),
                 waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
                 startShooting(),
-                waitMs(1250),
+                waitMs(1500),
                 stopShooting(),
                 // Shoot Pre-Load //
 
@@ -210,15 +191,16 @@ public class TwoTipUpGarden extends LinearOpMode {
                 // Grab from garden //
                 followWithTimeout(gardenCollect(), 1),
                 waitMs(250),
-                instant(() -> shooterVelocity = 1540),
+                instant(() -> shooterVelocity = 1520),
                 shooterOn(),
                 // Grab from garden //
 
                 // Shoot for the second time //
                 follow(follower, score2()),
                 waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
+                waitMs(500),
                 startShooting(),
-                waitMs(1000),
+                waitMs(1500),
                 stopShooting(),
                 // Shoot for the second time //
 
@@ -231,10 +213,7 @@ public class TwoTipUpGarden extends LinearOpMode {
 
                 // Grab out of the flower //
                 followWithTimeout(flower1Collect(), 0.5),
-                waitMs(250),
-                follow(follower, flower1Shuffle()),
-                followWithTimeout(flower1Collect2(), 0.5),
-                waitMs(250),
+                waitMs(1000),
                 shooterOn(),
                 // Grab out of the flower //
 
@@ -242,8 +221,9 @@ public class TwoTipUpGarden extends LinearOpMode {
                 follow(follower, score3()),
                 flowerUp(),
                 waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
+                waitMs(500),
                 startShooting(),
-                waitMs(1000),
+                waitMs(1500),
                 stopShooting(),
                 // Score for the third time //
 
@@ -256,19 +236,17 @@ public class TwoTipUpGarden extends LinearOpMode {
 
                 // Grab out of the second flower //
                 followWithTimeout(flower2Collect(), 0.5),
-                waitMs(250),
-                follow(follower, flower2Shuffle()),
-                followWithTimeout(flower2Collect2(), 0.5),
-                waitMs(250),
+                waitMs(1000),
                 shooterOn(),
                 // Grab out of the second flower //
 
                 // Score for the fourth time //
                 follow(follower, shoot4()),
                 waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
+                waitMs(500),
                 flowerUp(),
                 startShooting(),
-                waitMs(1000),
+                waitMs(1500),
                 stopShooting(),
                 // Score for the fourth time //
 
