@@ -9,16 +9,17 @@ public class PoseStorage {
     public static double teleOpY = 70.0;
     public static double teleOpHeadingDeg = -90.0;
     public static boolean hasAutoPose = false;
-
+    
+    private static final double HEADING_OFFSET_DEG = -90.0;
     public static void saveFromPedro(Pose pedroPose) {
         teleOpX = pedroPose.x() - 72.0;
         teleOpY = pedroPose.y() - 72.0;
-        teleOpHeadingDeg = AngleUnit.DEGREES.normalize(
-                Math.toDegrees(pedroPose.heading())
-        );
+
+        double rawDegrees = Math.toDegrees(pedroPose.heading());
+        teleOpHeadingDeg = AngleUnit.DEGREES.normalize(rawDegrees + HEADING_OFFSET_DEG);
+
         hasAutoPose = true;
     }
-
     public static void clear() {
         hasAutoPose = false;
     }
