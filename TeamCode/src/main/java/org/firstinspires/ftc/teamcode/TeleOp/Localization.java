@@ -9,26 +9,40 @@ import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit
 
 public class Localization {
 
-    public static final double START_X = -13.5;
-    public static final double START_Y = 70.0;
-    public static final double START_HEADING = -90.0;
+    // Default target values for manual re-localization via Back button
+    public static final double DEFAULT_START_X = -59.0;
+    public static final double DEFAULT_START_Y = 70.0;
+    public static final double DEFAULT_START_HEADING = -90.0;
     public static final double VEL_SMOOTHING = 0.5;
 
     private final RobotHardware Hardware;
     private final ElapsedTime resetTimer = new ElapsedTime();
     private boolean resetPending = false;
 
-    public double x = START_X;
-    public double y = START_Y;
-    public double yaw = START_HEADING;
+    public double x = DEFAULT_START_X;
+    public double y = DEFAULT_START_Y;
+    public double yaw = DEFAULT_START_HEADING;
     public double velX = 0, velY = 0, headingVel = 0;
     public boolean pinpointOK = false;
 
+    // 1. Standalone Constructor (Used if running TeleOp without Auto)
     public Localization(RobotHardware hw) {
         this.Hardware = hw;
         resetPose();
     }
 
+    // 2. Auto Handoff Constructor (Sets transferred auto pose instantly without wiping it)
+    public Localization(RobotHardware hw, double initialX, double initialY, double initialYaw) {
+        this.Hardware = hw;
+        this.x = initialX;
+        this.y = initialY;
+        this.yaw = initialYaw;
+
+        Hardware.Pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, initialX, initialY, AngleUnit.DEGREES, initialYaw));
+        resetPending = false;
+    }
+
+    // Manual re-localization trigger (resets IMU and snaps back to DEFAULT constants after 500ms)
     public void resetPose() {
         Hardware.Pinpoint.resetPosAndIMU();
         resetTimer.reset();
@@ -40,8 +54,9 @@ public class Localization {
     }
 
     public void update() {
+        // If driver pressed Back to re-localize, apply DEFAULT starting coordinates after 500ms
         if (resetPending && resetTimer.milliseconds() >= 500) {
-            Hardware.Pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, START_X, START_Y, AngleUnit.DEGREES, START_HEADING));
+            Hardware.Pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, DEFAULT_START_X, DEFAULT_START_Y, AngleUnit.DEGREES, DEFAULT_START_HEADING));
             resetPending = false;
             velX = velY = headingVel = 0;
         }

@@ -4,6 +4,7 @@ import com.pedropathing.math.Pose;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 public class PoseStorage {
+    // Default fallback to standard starting pose if TeleOp is run without Auto
     public static double teleOpX = -59.0;
     public static double teleOpY = 70.0;
     public static double teleOpHeadingDeg = -90.0;
@@ -16,5 +17,9 @@ public class PoseStorage {
                 Math.toDegrees(pedroPose.heading())
         );
         hasAutoPose = true;
+    }
+
+    public static void clear() {
+        hasAutoPose = false;
     }
 }

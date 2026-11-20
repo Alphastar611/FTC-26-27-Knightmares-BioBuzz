@@ -22,7 +22,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 
@@ -30,10 +29,10 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class TwoTipUpGarden extends LinearOpMode {
 
     private final ElapsedTime pathTimer = new ElapsedTime();
-    int shooterVelocity = 1520;
-    final int intakeVelocity = 1800;
-    final int transferVelocity = 2400;
-    final double flowerUp = 0.05;
+    int shooterVelocity = 1500;
+    int intakeVelocity = 1300;
+    final int transferVelocity = 2800;
+    final double flowerUp = 0.025;
     final double flowerDown = 0.31;
     private Follower follower;
     private DcMotor Shooter;
@@ -179,8 +178,9 @@ public class TwoTipUpGarden extends LinearOpMode {
                 follow(follower, shootPreload()),
                 waitUntil(() -> (((DcMotorEx) Shooter).getVelocity() > (shooterVelocity - 40))),
                 startShooting(),
-                waitMs(1500),
+                waitMs(2500),
                 stopShooting(),
+                instant(() -> intakeVelocity = 1800),
                 // Shoot Pre-Load //
 
                 // Drive to garden //
@@ -191,7 +191,7 @@ public class TwoTipUpGarden extends LinearOpMode {
                 // Grab from garden //
                 followWithTimeout(gardenCollect(), 1),
                 waitMs(250),
-                instant(() -> shooterVelocity = 1520),
+                instant(() -> shooterVelocity = 1480),
                 shooterOn(),
                 // Grab from garden //
 
